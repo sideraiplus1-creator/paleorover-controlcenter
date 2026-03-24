@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Íconos - Paleo Rover PWA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #3D2914 0%, #5D4E37 100%);
+            font-family: 'Arial', sans-serif;
+            padding: 2rem;
+            min-height: 100vh;
+            color: #E8DCC4;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 1rem;
+            color: #C4A35A;
+            font-size: 2rem;
+        }
+        
+        .info {
+            background: rgba(0,0,0,0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border-left: 4px solid #C4A35A;
+        }
+        
+        .info p {
+            margin: 0.5rem 0;
+            font-size: 0.9rem;
+        }
+        
+        .icons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .icon-card {
+            background: rgba(0,0,0,0.4);
+            border: 2px solid #C4A35A;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .icon-card h3 {
+            color: #C4A35A;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .icon-preview {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .icon-canvas {
+            border-radius: 4px;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+            color: #E8DCC4;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+        
+        .download-btn:hover {
+            background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%);
+            box-shadow: 0 0 10px rgba(196, 163, 90, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .status {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(107, 142, 35, 0.2);
+            border-radius: 8px;
+            margin-top: 2rem;
+            border: 2px solid #6B8E23;
+            color: #B8E6B8;
+        }
+        
+        .instruction {
+            background: rgba(0,0,0,0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+            border-left: 4px solid #8B4513;
+            line-height: 1.6;
+        }
+        
+        .instruction ol {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .instruction li {
+            margin: 0.5rem 0;
+        }
+        
+        code {
+            background: rgba(0,0,0,0.5);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #C4A35A;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦕 Generador de Íconos - Paleo Rover PWA</h1>
+        
+        <div class="info">
+            <p><strong>Genera automáticamente los íconos necesarios para la PWA</strong></p>
+            <p>Los íconos serán descargados en tu carpeta /icons/ como:</p>
+            <p>• <code>icon-72.png</code> - Para homescreen pequeña</p>
+            <p>• <code>icon-192.png</code> - Para homescreen mediana</p>
+            <p>• <code>icon-512.png</code> - Para splash screen</p>
+        </div>
+        
+        <div class="icons-grid">
+            <!-- Icono 72x72 -->
+            <div class="icon-card">
+                <h3>72×72 (Homescreen)</h3>
+                <div class="icon-preview">
+                    <canvas id="canvas72" class="icon-canvas" width="72" height="72"></canvas>
+                </div>
+                <button class="download-btn" onclick="downloadIcon(72)">
+                    📥 Descargar icon-72.png
+                </button>
+            </div>
+            
+            <!-- Icono 192x192 -->
+            <div class="icon-card">
+                <h3>192×192 (Homescreen)</h3>
+                <div class="icon-preview">
+                    <canvas id="canvas192" class="icon-canvas" width="192" height="192"></canvas>
+                </div>
+                <button class="download-btn" onclick="downloadIcon(192)">
+                    📥 Descargar icon-192.png
+                </button>
+            </div>
+            
+            <!-- Icono 512x512 -->
+            <div class="icon-card">
+                <h3>512×512 (Splash Screen)</h3>
+                <div class="icon-preview">
+                    <canvas id="canvas512" class="icon-canvas" width="512" height="512"></canvas>
+                </div>
+                <button class="download-btn" onclick="downloadIcon(512)">
+                    📥 Descargar icon-512.png
+                </button>
+            </div>
+        </div>
+        
+        <div class="status">
+            ✅ <strong>Haz clic en los botones para descargar cada ícono</strong><br>
+            Los archivos se guardarán como: <code>icon-72.png</code>, <code>icon-192.png</code>, <code>icon-512.png</code>
+        </div>
+        
+        <div class="instruction">
+            <strong>📋 Pasos siguientes:</strong>
+            <ol>
+                <li>Haz clic en cada botón "Descargar" arriba</li>
+                <li>Copia los 3 archivos descargados a la carpeta: <code>/icons/</code></li>
+                <li>Verifica que manifest.json esté correctamente configurado</li>
+                <li>¡La PWA estará lista para instalar! 🚀</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        // Paleta paleontológica
+        const colors = {
+            earthDark: '#3D2914',
+            earthMedium: '#5D4E37',
+            earthLight: '#8B7355',
+            sand: '#C4A35A',
+            bone: '#E8DCC4',
+            rust: '#8B4513',
+            moss: '#6B8E23'
+        };
+        
+        function drawIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Fondo degradado paleontológico
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, colors.earthMedium);
+            gradient.addColorStop(1, colors.earthDark);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Marco decorativo
+            ctx.strokeStyle = colors.sand;
+            ctx.lineWidth = Math.max(2, size * 0.03);
+            ctx.strokeRect(size * 0.05, size * 0.05, size * 0.9, size * 0.9);
+            
+            // Dinosaurio simplificado (triángulo + círculo)
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const scale = size / 100;
+            
+            // Cuerpo (óvalo)
+            ctx.fillStyle = colors.rust;
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY, 20 * scale, 12 * scale, -0.3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cabeza (círculo)
+            ctx.fillStyle = colors.rust;
+            ctx.beginPath();
+            ctx.arc(centerX + 18 * scale, centerY - 10 * scale, 10 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Ojo
+            ctx.fillStyle = colors.bone;
+            ctx.beginPath();
+            ctx.arc(centerX + 23 * scale, centerY - 12 * scale, 3 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cola (triángulo)
+            ctx.fillStyle = colors.earthLight;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 20 * scale, centerY);
+            ctx.lineTo(centerX - 35 * scale, centerY + 15 * scale);
+            ctx.lineTo(centerX - 28 * scale, centerY + 5 * scale);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Spike/armadura en la espalda
+            ctx.fillStyle = colors.sand;
+            for (let i = 0; i < 4; i++) {
+                const x = centerX - 8 * scale + i * 8 * scale;
+                const y = centerY - 14 * scale;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x - 3 * scale, y - 8 * scale);
+                ctx.lineTo(x + 3 * scale, y);
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            // Patas simples
+            ctx.lineWidth = Math.max(1, size * 0.02);
+            ctx.strokeStyle = colors.earthLight;
+            
+            // Pata izquierda
+            ctx.beginPath();
+            ctx.moveTo(centerX - 10 * scale, centerY + 12 * scale);
+            ctx.lineTo(centerX - 12 * scale, centerY + 20 * scale);
+            ctx.stroke();
+            
+            // Pata derecha
+            ctx.beginPath();
+            ctx.moveTo(centerX + 5 * scale, centerY + 12 * scale);
+            ctx.lineTo(centerX + 7 * scale, centerY + 20 * scale);
+            ctx.stroke();
+            
+            // Símbolo de exploración (lupa)
+            const lupaX = centerX + 5 * scale;
+            const lupaY = centerY - 15 * scale;
+            const lupaRadius = 4 * scale;
+            
+            ctx.strokeStyle = colors.sand;
+            ctx.lineWidth = Math.max(1, size * 0.02);
+            ctx.beginPath();
+            ctx.arc(lupaX + 3 * scale, lupaY, lupaRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Manija de la lupa
+            ctx.beginPath();
+            ctx.moveTo(lupaX + 6 * scale, lupaY + 3 * scale);
+            ctx.lineTo(lupaX + 9 * scale, lupaY + 6 * scale);
+            ctx.stroke();
+        }
+        
+        function downloadIcon(size) {
+            const canvasId = `canvas${size}`;
+            const canvas = document.getElementById(canvasId);
+            
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `icon-${size}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        // Generar todos los íconos al cargar
+        window.addEventListener('DOMContentLoaded', () => {
+            drawIcon('canvas72', 72);
+            drawIcon('canvas192', 192);
+            drawIcon('canvas512', 512);
+        });
+    </script>
+</body>
+</html>
