@@ -79,15 +79,22 @@ export class EventHandlers {
                 item.addEventListener('click', async () => {
                     const type = item.dataset.type;
                     menu.style.display = 'none';
-                    
+
                     if (type === 'simulation') {
-                        this.state.setConnected(true);
-                        this.ui.showMessage('Modo simulación activado');
+                        // Detener cualquier simulación previa antes de reiniciar
+                        this.sender.disableSimulation();
+                        await new Promise(r => setTimeout(r, 100));
+                        this.sender.enableSimulation();
+                        this.ui.showMessage('🎮 Modo simulación activado');
                     } else {
+                        // Detener simulación ANTES de conectar real
+                        this.sender.stopSimulationOnConnect();
                         const success = await this.sender.connectReal(type);
                         if (!success) {
-                            this.ui.showMessage('Falló la conexión, usando simulación');
-                            this.state.setConnected(true);
+                            this.ui.showMessage('⚠️ Faló la conexión, usando simulación');
+                            this.sender.enableSimulation();
+                        } else {
+                            this.ui.showMessage(`✅ Conectado por ${type === 'bluetooth' ? 'Bluetooth BLE' : 'USB-Serial'}`);
                         }
                     }
                 });
@@ -130,10 +137,20 @@ export class EventHandlers {
             const btn = document.getElementById(id);
             if (!btn) return;
             
-            btn.addEventListener('click', () => this.sender.send(command));
+            btn.addEventListener('click', async () => {
+                // Si está en simulación y no es MANUAL, cambiar modo
+                if (this.sender.isSimulation && this.state.mode !== 'MANUAL') {
+                    await this.sender.send('M:2'); // Cambiar a MANUAL primero
+                }
+                this.sender.send(command);
+            });
             
-            btn.addEventListener('touchstart', (e) => {
+            btn.addEventListener('touchstart', async (e) => {
                 e.preventDefault();
+                // Si está en simulación y no es MANUAL, cambiar modo
+                if (this.sender.isSimulation && this.state.mode !== 'MANUAL') {
+                    await this.sender.send('M:2'); // Cambiar a MANUAL primero
+                }
                 this.sender.send(command);
                 btn.style.transform = 'scale(0.95)';
             });

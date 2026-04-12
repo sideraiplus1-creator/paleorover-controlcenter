@@ -28,6 +28,7 @@ export class CommandSender {
      * Inicia conexión real (Serial o Bluetooth)
      */
     async connectReal(type = 'serial') {
+        this._simulationMode = false;
         this._stopAutoSimulation();
         
         let success = false;
@@ -92,8 +93,8 @@ export class CommandSender {
     _processSimulation(command) {
         const state = this.state;
         
-        // Movimiento manual
-        if (this._movementCommands[command] && state.mode === 'MANUAL') {
+        // Movimiento manual - funciona en cualquier modo
+        if (this._movementCommands[command]) {
             const move = this._movementCommands[command];
             state.updatePosition(move.dx, move.dy, move.rot);
             
@@ -171,11 +172,20 @@ export class CommandSender {
     enableSimulation() {
         this._simulationMode = true;
         this.state.setConnected(true);
-        this.state.setMode('EXPLORANDO');
-        this._startAutoSimulation();
-        this.state.addLogMessage('🎮 Simulación activada: movimiento, hallazgos y sonidos');
+        this.state.setMode('MANUAL');
+        this._stopAutoSimulation();
+        this.state.addLogMessage('🎮 Simulación activada: controla el robot con D-Pad');
         console.log('✅ Simulación activada. Usa paleoRover.sender.disableSimulation() para detener.');
         return true;
+    }
+
+    /**
+     * Detiene simulación antes de conectar real
+     */
+    stopSimulationOnConnect() {
+        this._stopAutoSimulation();
+        this._simulationMode = false;
+        this.state.addLogMessage('🔌 Simulación detenida - conexión real activa');
     }
 
     /**

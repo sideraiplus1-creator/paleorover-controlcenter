@@ -109,6 +109,10 @@ export class ConnectionManager {
     
     async connectBluetooth() {
         try {
+            // Limpiar estado previo
+            this.state.setIR(false, false);
+            this._bluetoothBuffer = '';
+            
             if (!('bluetooth' in navigator)) {
                 throw new Error('Web Bluetooth no soportado');
             }
@@ -165,6 +169,8 @@ export class ConnectionManager {
     
     _onBluetoothData(event) {
         const value = event.target.value;
+        if (!value || value.byteLength === 0) return;
+        
         const decoder = new TextDecoder();
         const message = decoder.decode(value);
         
@@ -239,17 +245,23 @@ export class ConnectionManager {
                 this.state.setDistance(parseInt(value) || 0);
                 break;
                 
-            case 'IR':
-                this.state.setIR(
-                    value.includes('L') || value === 'B',
-                    value.includes('R') || value === 'B'
-                );
-                if (value !== 'N') {
-                    const sensor = value === 'L' ? 'LEFT' : 
-                                  value === 'R' ? 'RIGHT' : 'BOTH';
+            case 'IR': {
+                const irLeft  = value === 'L' || value === 'B';
+                const irRight = value === 'R' || value === 'B';
+                const hasDetection = value === 'L' || value === 'R' || value === 'B';
+
+                this.state.setIR(irLeft, irRight);
+
+                if (hasDetection) {
+                    const sensor = value === 'L' ? 'LEFT' : value === 'R' ? 'RIGHT' : 'BOTH';
                     this.state.addDiscovery(sensor);
+                    setTimeout(() => this.state.setIR(false, false), 2000); // Auto-limpiar
+                } else {
+                    // value === 'N' → limpiar estado IR
+                    this.state.setIR(false, false);
                 }
                 break;
+            }
                 
             case 'ST':
                 this.state.setMode(value);

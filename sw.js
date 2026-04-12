@@ -3,7 +3,7 @@
  * Service Worker para modo offline
  */
 
-const CACHE_NAME = 'paleo-rover-v3';
+const CACHE_NAME = 'paleo-rover-v4';
 const urlsToCache = [
     'index.html',
     'css/styles.css',
