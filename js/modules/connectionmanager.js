@@ -183,10 +183,16 @@ export class ConnectionManager {
         if (!value || value.byteLength === 0) return;
         
         const decoder = new TextDecoder();
-        const message = decoder.decode(value);
+        let chunk = decoder.decode(value);
         
-        // Acumular y procesar líneas (similar a serial)
-        this._bluetoothBuffer = this._bluetoothBuffer + message;
+        // DEBUG: ver exactamente qué llega del HM-10
+        console.log('📡 BLE raw chunk:', JSON.stringify(chunk));
+        
+        // Normalizar CRLF -> LF (MUY común en Arduino/BT)
+        chunk = chunk.replace(/\r/g, '\n');
+        
+        this._bluetoothBuffer += chunk;
+        
         const lines = this._bluetoothBuffer.split('\n');
         this._bluetoothBuffer = lines.pop();
         
@@ -252,10 +258,15 @@ export class ConnectionManager {
         
         console.log('📥 Recibido:', message);
         
-        const parts = message.split(':');
-        if (parts.length !== 2) return;
-        
-        const [key, value] = parts;
+        // Parsing flexible: buscar primer :
+        const idx = message.indexOf(':');
+        if (idx < 0) {
+            // DEBUG opcional
+            console.log('⚠️ Mensaje sin ":" descartado:', message);
+            return;
+        }
+        const key = message.slice(0, idx).trim();
+        const value = message.slice(idx + 1).trim();
         
         switch (key) {
             case 'DIST':
@@ -263,21 +274,40 @@ export class ConnectionManager {
                 break;
                 
             case 'IR': {
-                const irLeft  = value === 'L' || value === 'B';
-                const irRight = value === 'R' || value === 'B';
-                const hasDetection = value === 'L' || value === 'R' || value === 'B';
-
-                this.state.setIR(irLeft, irRight);
-
-                if (hasDetection) {
-                    const sensor = value === 'L' ? 'LEFT' : value === 'R' ? 'RIGHT' : 'BOTH';
-                    this.state.addDiscovery(sensor);
-                    setTimeout(() => this.state.setIR(false, false), 2000); // Auto-limpiar
+                const v = value.toUpperCase();
+                
+                let irLeft = false, irRight = false;
+                
+                // Formatos soportados:
+                // L, R, B
+                // LEFT/RIGHT/BOTH
+                // IZQ/DER
+                // 1,0  0,1  1,1  0,0
+                if (v === 'L' || v === 'LEFT' || v === 'IZQ') irLeft = true;
+                else if (v === 'R' || v === 'RIGHT' || v === 'DER') irRight = true;
+                else if (v === 'B' || v === 'BOTH' || v === 'LR') { irLeft = true; irRight = true; }
+                else if (v.includes(',')) {
+                    const [a,b] = v.split(',').map(s => s.trim());
+                    irLeft = (a === '1');
+                    irRight = (b === '1');
+                } else if (v === 'N' || v === 'NONE' || v === '0') {
+                    irLeft = false; irRight = false;
                 } else {
-                    // value === 'N' → limpiar estado IR
-                    this.state.setIR(false, false);
+                    console.log('⚠️ IR value no reconocido:', value);
+                }
+                
+                const hadAny = this.state.irLeft || this.state.irRight;
+                this.state.setIR(irLeft, irRight);
+                
+                // Disparar hallazgo solo en "flanco" (cuando pasa de nada -> algo)
+                const hasAny = irLeft || irRight;
+                if (!hadAny && hasAny) {
+                    const sensor = (irLeft && irRight) ? 'BOTH' : (irLeft ? 'LEFT' : 'RIGHT');
+                    this.state.addDiscovery(sensor);
+                    setTimeout(() => this.state.setIR(false, false), 2000);
                 }
                 break;
+            }
             }
                 
             case 'ST':
