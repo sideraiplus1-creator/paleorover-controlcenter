@@ -115,14 +115,10 @@ export class ConnectionManager {
             
             this.state.addLogMessage('Buscando dispositivo BLE...');
             
-            // Solicitar dispositivo con servicio UART estándar
+            // Solicitar CUALQUIER dispositivo BLE cercano (sin filtros de nombre)
+            // Esto muestra todos los dispositivos disponibles para que el usuario elija
             this.device = await navigator.bluetooth.requestDevice({
-                filters: [
-                    { namePrefix: 'HM-' },      // HM-10, HM-11
-                    { namePrefix: 'JDY-' },     // JDY series
-                    { namePrefix: 'MLT-' },     // MLT-BT05
-                    { services: ['0000ffe0-0000-1000-8000-00805f9b34fb'] } // UART service
-                ],
+                acceptAllDevices: true,
                 optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
             });
             
