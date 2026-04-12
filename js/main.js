@@ -14,7 +14,7 @@ import { StorageManager } from './modules/storagemanager.js';
 import { AudioFeedback } from './modules/audiofeedback.js';
 import { ChartManager } from './modules/chartmanager.js';
 import { MissionRecorder } from './modules/missionrecorder.js';
-// import { PWAManager } from './modules/pwamanager.js'; // TODO: Fix pwamanager export
+import { PWAManager } from './modules/pwamanager.js';
 
 window.paleoRoverStartTime = Date.now();
 
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ═══════════════════════════════════════════════════
     const protocol = new ProtocolHandler(robotState);
     const recorder = new MissionRecorder(robotState, commandSender);
-    // const pwa = new PWAManager(); // TODO: Fix pwamanager export
+    const pwa = new PWAManager();
     
     // Heartbeat periódico
     setInterval(() => {
@@ -93,9 +93,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ═══════════════════════════════════════════════════
     
     // Botón de instalación PWA
-    // document.getElementById('btnInstall')?.addEventListener('click', () => {
-    //     pwa.install();
-    // });
+    document.getElementById('btnInstall')?.addEventListener('click', () => {
+        pwa.install();
+    });
     
     // Controles de grabación
     document.getElementById('btnRecord')?.addEventListener('click', () => {
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Fase 5
         protocol: protocol,
         recorder: recorder,
-        // pwa: pwa, // TODO: Fix pwamanager export
+        pwa: pwa,
         
         // Métodos
         connect: (type) => commandSender.connectReal(type),
