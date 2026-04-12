@@ -189,15 +189,15 @@ export class StorageManager {
             <th>Posición Y</th>
             <th>Hora</th>
         </tr>
-        ${discoveries.map(d => \`
+        ${discoveries.map(d => `
         <tr>
-            <td>\${d.number}</td>
-            <td>\${d.sensor}</td>
-            <td>\${d.position.x.toFixed(1)}</td>
-            <td>\${d.position.y.toFixed(1)}</td>
-            <td>\${d.timestamp}</td>
+            <td>${d.number}</td>
+            <td>${d.sensor}</td>
+            <td>${d.position.x.toFixed(1)}</td>
+            <td>${d.position.y.toFixed(1)}</td>
+            <td>${d.timestamp}</td>
         </tr>
-        \`).join('')}
+        `).join('')}
     </table>
     
     <h2>📍 Mapa de Ruta</h2>
