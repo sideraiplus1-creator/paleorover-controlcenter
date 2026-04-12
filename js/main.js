@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Botón de instalación PWA
     document.getElementById('btnInstall')?.addEventListener('click', () => {
-        pwa.install();
+        pwa.promptInstall();
     });
     
     // Controles de grabación

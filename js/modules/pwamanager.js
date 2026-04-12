@@ -1,129 +1,52 @@
 /**
  * PWAManager.js
- * Gestión de Progressive Web App (PWA) - Instalación y actualizaciones
+ * Gestiona funcionalidades de Progressive Web App
  */
 
 export class PWAManager {
     constructor() {
-        this.deferredPrompt = null;
-        this._initInstallPrompt();
-        this._registerServiceWorker();
+        this._deferredPrompt = null;
+        this._installed = false;
+        this._init();
     }
 
-    // ═══════════════════════════════════════════════════════
-    // INSTALACIÓN PWA
-    // ═══════════════════════════════════════════════════════
-
-    _initInstallPrompt() {
-        // Detectar cuando el navegador muestra el prompt de instalación
+    _init() {
+        // Capturar evento de instalación
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
-            this.deferredPrompt = e;
-            // El botón "Instalar" ya está disponible
-            console.log('📱 PWA instalable detectada');
+            this._deferredPrompt = e;
+            this._showInstallButton();
         });
 
-        // Manejar el resultado de la instalación
+        // Detectar si ya está instalada
         window.addEventListener('appinstalled', () => {
-            console.log('✅ PWA instalada en el dispositivo');
-            this.deferredPrompt = null;
+            this._installed = true;
+            this._deferredPrompt = null;
+            console.log('✅ PWA instalada');
         });
-    }
 
-    /**
-     * Muestra el prompt de instalación
-     */
-    async install() {
-        if (!this.deferredPrompt) {
-            console.warn('El prompt de instalación no está disponible');
-            return false;
-        }
-
-        try {
-            this.deferredPrompt.prompt();
-            const { outcome } = await this.deferredPrompt.userChoice;
-            console.log(`Usuario ${outcome === 'accepted' ? 'aceptó' : 'rechazó'} la instalación`);
-            this.deferredPrompt = null;
-            return outcome === 'accepted';
-        } catch (error) {
-            console.error('Error al instalar PWA:', error);
-            return false;
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // SERVICE WORKER
-    // ═══════════════════════════════════════════════════════
-
-    async _registerServiceWorker() {
+        // Registrar Service Worker
         if ('serviceWorker' in navigator) {
-            try {
-                const registration = await navigator.serviceWorker.register('./sw.js');
-                console.log('✅ Service Worker registrado:', registration);
-
-                // Detectar actualizaciones
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'activated') {
-                            console.log('🔄 Nueva versión de PWA disponible');
-                            this._notifyUpdate();
-                        }
-                    });
-                });
-            } catch (error) {
-                console.warn('Service Worker no disponible:', error);
-            }
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW registrado:', reg.scope))
+                .catch(err => console.warn('SW error:', err));
         }
     }
 
-    /**
-     * Notifica al usuario sobre actualizaciones
-     */
-    _notifyUpdate() {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Paleo Rover - Actualización disponible', {
-                body: 'Se ha detectado una nueva versión. Recarga para actualizar.',
-                icon: './icons/paleorover-192.png'
-            });
-        }
+    _showInstallButton() {
+        const btn = document.getElementById('btn-install');
+        if (btn) btn.style.display = 'block';
     }
 
-    // ═══════════════════════════════════════════════════════
-    // UTILIDADES
-    // ═══════════════════════════════════════════════════════
+    async promptInstall() {
+        if (!this._deferredPrompt) return;
+        this._deferredPrompt.prompt();
+        const { outcome } = await this._deferredPrompt.userChoice;
+        console.log('Instalación:', outcome);
+        this._deferredPrompt = null;
+    }
 
-    /**
-     * Verifica si la app está instalada
-     */
     isInstalled() {
-        return window.matchMedia('(display-mode: standalone)').matches ||
-               navigator.standalone === true;
-    }
-
-    /**
-     * Obtiene información de la app
-     */
-    getInfo() {
-        return {
-            installed: this.isInstalled(),
-            standalone: navigator.standalone,
-            pwaEnabled: 'serviceWorker' in navigator,
-            online: navigator.onLine
-        };
-    }
-
-    /**
-     * Solicita permiso de notificaciones
-     */
-    async requestNotificationPermission() {
-        if ('Notification' in window) {
-            if (Notification.permission === 'default') {
-                const permission = await Notification.requestPermission();
-                return permission === 'granted';
-            }
-            return Notification.permission === 'granted';
-        }
-        return false;
+        return this._installed || window.matchMedia('(display-mode: standalone)').matches;
     }
 }
