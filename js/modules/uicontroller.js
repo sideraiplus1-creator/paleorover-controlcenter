@@ -193,17 +193,32 @@ export class UIController {
     
     _showDiscoveryOverlay(discovery) {
         const overlay = this.elements.discoveryOverlay;
-        
-        // Personalizar mensaje según sensor
-        const subtitle = overlay.querySelector('.discovery-subtitle');
+        if (!overlay) {
+            console.warn('❌ discoveryOverlay no encontrado en el DOM');
+            return;
+        }
+
+        // Buscar subtitle con múltiples selectores por si cambió el nombre
+        const subtitle = overlay.querySelector('.discovery-subtitle') 
+                      || overlay.querySelector('.discovery-desc')
+                      || overlay.querySelector('p');
+
         const sensorText = {
             'LEFT': 'Sensor izquierdo',
             'RIGHT': 'Sensor derecho',
             'BOTH': '¡Ambos sensores!'
         };
-        subtitle.textContent = `${sensorText[discovery.sensor]} • ${discovery.timestamp}`;
-        
+
+        if (subtitle) {
+            subtitle.textContent = `${sensorText[discovery.sensor] || discovery.sensor} • ${discovery.timestamp}`;
+        }
+
+        // Forzar reflow para que la animación se reinicie si ya estaba activo
+        overlay.classList.remove('active');
+        void overlay.offsetWidth; // fuerza reflow
         overlay.classList.add('active');
+        
+        console.log('🦴 Overlay activado:', discovery);
     }
     
     _updateDiscoveriesList() {

@@ -19,6 +19,12 @@ export class ConnectionManager {
         this._readLoopRunning = false;
         this._messageQueue = [];
         this._bluetoothBuffer = '';
+        
+        // Heartbeat y reconexión BLE
+        this._heartbeatInterval = null;
+        this._reconnectAttempts = 0;
+        this._maxReconnectAttempts = 3;
+        this._isReconnecting = false;
     }
     
     // ═══════════════════════════════════════════════════════
@@ -154,9 +160,14 @@ export class ConnectionManager {
             
             // Manejar desconexión
             this.device.addEventListener('gattserverdisconnected', () => {
+                this._stopHeartbeat();
                 this.state.addLogMessage('⚠️ Bluetooth desconectado');
-                this.disconnect();
+                this._attemptReconnect();
             });
+            
+            // Iniciar heartbeat para mantener conexión viva
+            this._startHeartbeat();
+            this._reconnectAttempts = 0;
             
             return true;
             
@@ -223,7 +234,13 @@ export class ConnectionManager {
         }
         
         const encoder = new TextEncoder();
-        await this.characteristic.writeValue(encoder.encode(data));
+        // writeValueWithoutResponse es más rápido y no bloquea
+        // writeValue está deprecado en Chrome nuevo
+        if (this.characteristic.writeValueWithoutResponse) {
+            await this.characteristic.writeValueWithoutResponse(encoder.encode(data));
+        } else {
+            await this.characteristic.writeValue(encoder.encode(data));
+        }
     }
     
     // ═══════════════════════════════════════════════════════
@@ -290,10 +307,90 @@ export class ConnectionManager {
     }
     
     // ═══════════════════════════════════════════════════════
+    // HEARTBEAT - Mantiene la conexión BLE viva
+    // ═══════════════════════════════════════════════════════
+
+    _startHeartbeat() {
+        this._stopHeartbeat(); // Limpiar anterior si existe
+        this._heartbeatInterval = setInterval(async () => {
+            if (this.type !== 'bluetooth' || !this.device) return;
+            
+            try {
+                // Enviar byte vacío para mantener conexión viva
+                if (this.characteristic && this.server?.connected) {
+                    const encoder = new TextEncoder();
+                    if (this.characteristic.writeValueWithoutResponse) {
+                        await this.characteristic.writeValueWithoutResponse(
+                            encoder.encode('\n')
+                        );
+                    }
+                }
+            } catch (e) {
+                console.warn('Heartbeat falló:', e.message);
+                // No desconectar aquí, dejar que gattserverdisconnected lo maneje
+            }
+        }, 3000); // Cada 3 segundos
+    }
+
+    _stopHeartbeat() {
+        if (this._heartbeatInterval) {
+            clearInterval(this._heartbeatInterval);
+            this._heartbeatInterval = null;
+        }
+    }
+
+    async _attemptReconnect() {
+        if (this._isReconnecting || !this.device) return;
+        if (this._reconnectAttempts >= this._maxReconnectAttempts) {
+            this.state.addLogMessage('❌ No se pudo reconectar. Intenta manualmente.');
+            this.state.setConnected(false);
+            this.type = 'simulation';
+            return;
+        }
+
+        this._isReconnecting = true;
+        this._reconnectAttempts++;
+        this.state.addLogMessage(
+            `🔄 Reconectando... intento ${this._reconnectAttempts}/${this._maxReconnectAttempts}`
+        );
+
+        try {
+            await new Promise(r => setTimeout(r, 2000)); // Esperar 2s antes de reintentar
+            
+            this.server = await this.device.gatt.connect();
+            const service = await this.server.getPrimaryService(
+                '0000ffe0-0000-1000-8000-00805f9b34fb'
+            );
+            this.characteristic = await service.getCharacteristic(
+                '0000ffe1-0000-1000-8000-00805f9b34fb'
+            );
+            await this.characteristic.startNotifications();
+            this.characteristic.addEventListener(
+                'characteristicvaluechanged',
+                (e) => this._onBluetoothData(e)
+            );
+
+            this.type = 'bluetooth';
+            this.state.setConnected(true);
+            this._reconnectAttempts = 0;
+            this._startHeartbeat();
+            this.state.addLogMessage('✅ Reconectado exitosamente');
+
+        } catch (e) {
+            this.state.addLogMessage(`⚠️ Intento ${this._reconnectAttempts} fallido`);
+            this._isReconnecting = false;
+            await this._attemptReconnect(); // Reintentar
+        } finally {
+            this._isReconnecting = false;
+        }
+    }
+    
+    // ═══════════════════════════════════════════════════════
     // DESCONECTAR
     // ═══════════════════════════════════════════════════════
     
     async disconnect() {
+        this._stopHeartbeat();
         this._readLoopRunning = false;
         
         // Cerrar Serial
