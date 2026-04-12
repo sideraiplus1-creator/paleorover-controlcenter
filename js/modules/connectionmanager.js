@@ -307,9 +307,7 @@ export class ConnectionManager {
                     setTimeout(() => this.state.setIR(false, false), 2000);
                 }
                 break;
-            }
-            }
-                
+            
             case 'ST':
                 this.state.setMode(value);
                 break;
