@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paleo Rover - Control Center</title>
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="logo">
+            <span class="logo-icon">🦕</span>
+            <div class="logo-text">
+                <h1>PALEO ROVER</h1>
+                <span class="logo-subtitle">Control Center</span>
+            </div>
+        </div>
+        <div class="connection-status">
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Desconectado</span>
+            </div>
+            <button class="btn-connect" id="btnConnect">🔗 Conectar</button>
+            <button id="btnInstall" class="btn-install" style="display:none" title="Instalar App">📲 Instalar App</button>
+        </div>
+    </header>
+
+    <main class="main-grid">
+
+        <!-- COLUMNA 1: Mapa -->
+        <section class="panel panel-map">
+            <header class="panel-header">
+                <span class="panel-icon">🗺️</span>
+                <h2>Mapa de Excavación</h2>
+            </header>
+            <div class="map-container">
+                <canvas id="explorationMap" width="300" height="300"></canvas>
+                <div class="map-legend">
+                    <div class="legend-item"><span class="legend-dot robot"></span><span>Robot</span></div>
+                    <div class="legend-item"><span class="legend-dot trail"></span><span>Rastro</span></div>
+                    <div class="legend-item"><span class="legend-dot fossil"></span><span>Hallazgo</span></div>
+                </div>
+            </div>
+            <div class="map-stats">
+                <div class="stat">
+                    <span class="stat-label">Área explorada</span>
+                    <span class="stat-value" id="areaExplored">0 m²</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Posición</span>
+                    <span class="stat-value" id="position">X:0 Y:0</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- COLUMNA 2: Controles -->
+        <section class="panel panel-controls">
+            <header class="panel-header">
+                <span class="panel-icon">🕹️</span>
+                <h2>Controles de Campo</h2>
+            </header>
+
+            <!-- Switch Modo AUTO/MANUAL -->
+            <div class="mode-switch">
+                <span class="mode-label">Modo:</span>
+                <div class="toggle-container">
+                    <button class="mode-btn active" id="btnAuto" data-mode="auto">🤖 AUTO</button>
+                    <button class="mode-btn" id="btnManual" data-mode="manual">🎮 MANUAL</button>
+                </div>
+            </div>
+
+            <!-- D-Pad -->
+            <div class="dpad-container">
+                <div class="dpad">
+                    <button class="dpad-btn dpad-up"     id="btnUp"    data-cmd="F">▲</button>
+                    <button class="dpad-btn dpad-left"   id="btnLeft"  data-cmd="L">◀</button>
+                    <button class="dpad-btn dpad-center" id="btnStop"  data-cmd="S">⏹</button>
+                    <button class="dpad-btn dpad-right"  id="btnRight" data-cmd="R">▶</button>
+                    <button class="dpad-btn dpad-down"   id="btnDown"  data-cmd="B">▼</button>
+                </div>
+            </div>
+
+            <!-- Velocidad -->
+            <div class="speed-controls">
+                <div class="speed-control">
+                    <label for="speedManual">⚡ Velocidad</label>
+                    <input type="range" id="speedManual" min="80" max="255" value="180" step="5">
+                    <span id="speedManualDisplay">180</span>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <!-- FIX: btnDance usa E:3 (modo baile), btnScan es toggle búsqueda unificado -->
+            <div class="action-buttons">
+                <button class="action-btn btn-dance" id="btnDance">
+                    <span class="btn-icon">💃</span>
+                    <span class="btn-text">Baile</span>
+                </button>
+                <!-- btnScan ahora es el toggle unificado de búsqueda (antes btnToggleSearch) -->
+                <button class="action-btn btn-scan" id="btnScan" data-active="false">
+                    <span class="btn-icon">🔍</span>
+                    <span class="btn-text">Búsqueda: OFF</span>
+                </button>
+                <button class="action-btn btn-beep" id="btnBeep" data-cmd="BEEP">
+                    <span class="btn-icon">📢</span>
+                    <span class="btn-text">Llamar</span>
+                </button>
+            </div>
+
+            <!-- Misiones -->
+            <div class="mission-panel">
+                <div class="mission-header">
+                    <span>🎬 Misiones</span>
+                    <span id="missionStatus" class="mission-status">Listo</span>
+                </div>
+                <div class="mission-controls">
+                    <button id="btnRecord" class="btn-record">⏺ Grabar</button>
+                    <button id="btnPlayMission" class="btn-play" disabled>▶ Reproducir</button>
+                    <button id="btnDeleteMission" class="btn-danger-sm" disabled>🗑</button>
+                </div>
+                <ul id="missionList" class="mission-list">
+                    <li class="mission-empty">Sin misiones guardadas</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- COLUMNA 3: Hallazgos -->
+        <section class="panel panel-discoveries">
+            <header class="panel-header">
+                <span class="panel-icon">🦴</span>
+                <h2>Hallazgos</h2>
+                <div class="discovery-counter" id="discoveryCounter">0</div>
+            </header>
+            <div class="discoveries-list" id="discoveriesList">
+                <div class="empty-state">
+                    <span class="empty-icon">🏜️</span>
+                    <p>Aún no hay hallazgos</p>
+                    <span class="empty-hint">El robot detectará fósiles automáticamente</span>
+                </div>
+            </div>
+            <button class="btn-danger" id="btnReset" data-cmd="RESET">
+                <span>🔄</span> Reset
+            </button>
+            <div class="export-buttons">
+                <button id="btnExportHTML" class="btn-export" title="Descargar reporte HTML"><span>📄</span><span>HTML</span></button>
+                <button id="btnExportCSV"  class="btn-export" title="Descargar datos CSV"><span>📊</span><span>CSV</span></button>
+                <button id="btnExportJSON" class="btn-export" title="Descargar datos JSON"><span>💾</span><span>JSON</span></button>
+            </div>
+        </section>
+
+        <!-- Panel de estadísticas -->
+        <section class="panel panel-stats">
+            <header class="panel-header">
+                <span class="panel-icon">📊</span>
+                <h2>Gráficos</h2>
+            </header>
+            <div class="stats-content">
+                <canvas id="distanceChart" width="280" height="100"></canvas>
+                <div class="stats-grid">
+                    <div class="stat-item"><span class="stat-label">⏱️ Tiempo</span><span class="stat-value" id="sessionTime">00:00</span></div>
+                    <div class="stat-item"><span class="stat-label">📏 Distancia</span><span class="stat-value" id="totalDistance">0m</span></div>
+                    <div class="stat-item"><span class="stat-label">⚡ Velocidad</span><span class="stat-value" id="avgSpeed">0cm/s</span></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER: Sensores -->
+    <footer class="sensor-bar">
+        <div class="sensor-group">
+            <span class="sensor-label">📡 Distancia</span>
+            <div class="sensor-value">
+                <span id="distanceValue">--</span>
+                <span class="sensor-unit">cm</span>
+            </div>
+            <div class="sensor-bar-visual" id="distanceBar">
+                <div class="sensor-fill"></div>
+            </div>
+        </div>
+        <div class="sensor-group">
+            <span class="sensor-label">👁️ Sensores IR</span>
+            <div class="ir-sensors">
+                <div class="ir-indicator" id="irLeft"><span class="ir-label">IZQ</span><span class="ir-dot"></span></div>
+                <div class="ir-indicator" id="irRight"><span class="ir-label">DER</span><span class="ir-dot"></span></div>
+            </div>
+        </div>
+        <div class="sensor-group">
+            <span class="sensor-label">🎯 Estado</span>
+            <div class="state-badge" id="stateBadge">
+                <span class="state-dot"></span>
+                <span class="state-text">IDLE</span>
+            </div>
+        </div>
+        <div class="sensor-group sensor-log">
+            <span class="sensor-label">📝 Log</span>
+            <div class="log-display" id="logDisplay">Esperando conexión...</div>
+            <button id="btnCopyLog" class="btn-secondary" title="Copiar log">📋 Copiar log</button>
+        </div>
+    </footer>
+
+    <!-- Overlay hallazgo -->
+    <div class="discovery-overlay" id="discoveryOverlay" style="display:none;">
+        <div class="discovery-animation">
+            <div class="dust-particles"></div>
+            <div class="fossil-reveal">🦴</div>
+            <h3 class="discovery-title">¡HALLAZGO!</h3>
+            <div class="discovery-number" id="discoveryNumber">#0</div>
+            <div class="discovery-sensor" id="discoverySensor">Sensor: --</div>
+            <p class="discovery-subtitle">Fósil detectado</p>
+        </div>
+    </div>
+
+    <!-- Overlay baile -->
+    <div id="danceOverlay">
+        <div class="dance-content">
+            <div class="dance-dino">🦕</div>
+            <div class="dance-title">¡MODO BAILE!</div>
+            <div class="dance-subtitle">El rover está celebrando</div>
+            <div class="dance-bones">🦴 🦴 🦴</div>
+        </div>
+    </div>
+
+    <script type="module" src="./js/main.js"></script>
+</body>
+</html>
