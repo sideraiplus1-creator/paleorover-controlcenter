@@ -121,8 +121,19 @@ export class EventHandlers {
         const btnManual = document.getElementById('btnManual');
         
         // Arduino: E:1=AUTO(EXPLORANDO), E:2=MANUAL
-        btnAuto.addEventListener('click', () => this.sender.send('E:1'));
-        btnManual.addEventListener('click', () => this.sender.send('E:2'));
+        const sendMode = async (cmd) => {
+            // Reenviar un par de veces para evitar pérdidas en BLE móvil
+            await this.sender.send(cmd);
+            setTimeout(() => this.sender.send(cmd), 120);
+            setTimeout(() => this.sender.send(cmd), 260);
+        };
+
+        btnAuto.addEventListener('click', () => sendMode('E:1'));
+        btnManual.addEventListener('click', () => sendMode('E:2'));
+
+        // En móvil a veces no dispara click; asegurar touch
+        btnAuto.addEventListener('touchstart', (e) => { e.preventDefault(); sendMode('E:1'); }, { passive: false });
+        btnManual.addEventListener('touchstart', (e) => { e.preventDefault(); sendMode('E:2'); }, { passive: false });
     }
     
     /**
