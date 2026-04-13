@@ -231,7 +231,8 @@ void ejecutarBaile(unsigned long ahora) {
   // FIX: terminar baile automáticamente después de DURACION_BAILE
   if (ahora - tiempoInicioHallazgo > DURACION_BAILE) {
     detener();
-    cambiarEstado(estadoAnterior == BAILANDO ? EXPLORANDO : estadoAnterior);
+    // Al terminar baile, no volver a AUTO por defecto
+    cambiarEstado(IDLE);
     return;
   }
   if (ahora - ultimoMovimientoBaile > 400) {
@@ -409,7 +410,18 @@ void leerBluetooth() {
         bufferComando = "";
       }
     } else {
-      bufferComando += c;
+      // Filtro anti-ruido: solo aceptar ASCII imprimible.
+      // Si RX tiene falso contacto/ruido o baud incorrecto, pueden entrar bytes basura.
+      if (c >= 32 && c <= 126) {
+        bufferComando += c;
+        // Evitar crecimiento infinito si llegan streams corruptos sin \n
+        if (bufferComando.length() > 32) {
+          bufferComando = "";
+        }
+      } else {
+        // Byte no imprimible: descartar y resetear buffer para no mezclar comandos
+        bufferComando = "";
+      }
     }
   }
 }
@@ -421,6 +433,17 @@ void leerBluetooth() {
 void procesarComando(String cmd) {
   cmd.trim();
   if (cmd.length() == 0) return;
+
+  // Validación extra: comandos solo con charset seguro
+  for (unsigned int i = 0; i < cmd.length(); i++) {
+    char ch = cmd.charAt(i);
+    if (!(ch >= '0' && ch <= '9') &&
+        !(ch >= 'A' && ch <= 'Z') &&
+        ch != ':' && ch != ',' && ch != '_' && ch != '-') {
+      // Comando corrupto/ruidoso: ignorar
+      return;
+    }
+  }
 
   Serial.print(F("CMD: "));
   Serial.println(cmd);
@@ -565,10 +588,11 @@ void procesarModo(String cmd) {
 void verificarTimeoutConexion(unsigned long ahora) {
   if (estadoActual != MANUAL) return;
   if (ahora - ultimoComandoRecibido > TIMEOUT_RECONEXION) {
-    Serial.println(F("Timeout BT - volviendo a EXPLORANDO"));
-    bluetooth.println(F("MSG:Timeout BT, modo AUTO"));
+    // No volver a AUTO automáticamente: solo cambiar a AUTO cuando lo ordene el usuario (E:1)
+    Serial.println(F("Timeout BT - deteniendo (sin cambiar a AUTO)"));
+    bluetooth.println(F("MSG:Timeout BT, deteniendo"));
     detener();
-    cambiarEstado(EXPLORANDO);
+    cambiarEstado(IDLE);
   }
 }
 
