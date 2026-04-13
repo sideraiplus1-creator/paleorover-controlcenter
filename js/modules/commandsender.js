@@ -22,6 +22,11 @@ export class CommandSender {
         };
         
         this._autoSimulationInterval = null;
+
+        // Auto-mapa (optimista) cuando el robot está en EXPLORANDO real
+        this._autoMapInterval = null;
+        this._autoMapTickMs = 200; // elegido: medio en dibujo / lento en robot
+        this._startAutoMapLoop();
     }
     
     /**
@@ -41,6 +46,8 @@ export class CommandSender {
         
         if (success) {
             this._simulationMode = false;
+            // Re-activar auto-mapa al reconectar
+            this._startAutoMapLoop();
         }
         
         return success;
@@ -52,6 +59,7 @@ export class CommandSender {
     async disconnect() {
         await this.connection.disconnect();
         this._simulationMode = true;
+        this._stopAutoMapLoop();
     }
     
     /**
@@ -172,6 +180,25 @@ export class CommandSender {
         if (this._autoSimulationInterval) {
             clearInterval(this._autoSimulationInterval);
             this._autoSimulationInterval = null;
+        }
+    }
+
+    _startAutoMapLoop() {
+        if (this._autoMapInterval) return;
+        this._autoMapInterval = setInterval(() => {
+            // Solo en conexión real y modo EXPLORANDO
+            if (!this.isConnected) return;
+            if (this.state.mode !== 'EXPLORANDO') return;
+
+            // Estimación simple: avanzar hacia adelante
+            this.state.updatePosition(0, -1, 0);
+        }, this._autoMapTickMs);
+    }
+
+    _stopAutoMapLoop() {
+        if (this._autoMapInterval) {
+            clearInterval(this._autoMapInterval);
+            this._autoMapInterval = null;
         }
     }
     

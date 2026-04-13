@@ -133,33 +133,64 @@ export class EventHandlers {
             'btnUp': 'F', 'btnDown': 'B',
             'btnLeft': 'L', 'btnRight': 'R', 'btnStop': 'S'
         };
-        
+
+        // Control por mantener presionado:
+        // - al presionar: enviar comando + repetir cada 250ms
+        // - al soltar/cancelar: enviar STOP
+        let holdInterval = null;
+        let heldCommand = null;
+
+        const stopHold = () => {
+            if (holdInterval) {
+                clearInterval(holdInterval);
+                holdInterval = null;
+            }
+            heldCommand = null;
+            this.sender.send('S');
+        };
+
+        const startHold = async (cmd) => {
+            // Si está en simulación y no es MANUAL, cambiar modo
+            if (this.sender.isSimulation && this.state.mode !== 'MANUAL') {
+                await this.sender.send('E:2');
+            }
+
+            // STOP es inmediato, sin repetición
+            if (cmd === 'S') {
+                stopHold();
+                return;
+            }
+
+            heldCommand = cmd;
+            this.sender.send(cmd);
+            if (holdInterval) clearInterval(holdInterval);
+            holdInterval = setInterval(() => {
+                if (heldCommand) this.sender.send(heldCommand);
+            }, 250);
+        };
+
         Object.entries(dpadButtons).forEach(([id, command]) => {
             const btn = document.getElementById(id);
             if (!btn) return;
-            
-            btn.addEventListener('click', async () => {
-                // Si está en simulación y no es MANUAL, cambiar modo
-                if (this.sender.isSimulation && this.state.mode !== 'MANUAL') {
-                    await this.sender.send('E:2'); // Cambiar a MANUAL primero
-                }
-                this.sender.send(command);
-            });
-            
-            btn.addEventListener('touchstart', async (e) => {
+
+            // Mouse
+            btn.addEventListener('mousedown', () => startHold(command));
+            btn.addEventListener('mouseup', stopHold);
+            btn.addEventListener('mouseleave', stopHold);
+
+            // Touch
+            btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                // Si está en simulación y no es MANUAL, cambiar modo
-                if (this.sender.isSimulation && this.state.mode !== 'MANUAL') {
-                    await this.sender.send('E:2'); // Cambiar a MANUAL primero
-                }
-                this.sender.send(command);
+                startHold(command);
                 btn.style.transform = 'scale(0.95)';
-            });
-            
-            btn.addEventListener('touchend', () => {
-                btn.style.transform = '';
-            });
+            }, { passive: false });
+            btn.addEventListener('touchend', () => { stopHold(); btn.style.transform = ''; });
+            btn.addEventListener('touchcancel', () => { stopHold(); btn.style.transform = ''; });
         });
+
+        // Safety: si sueltan fuera del botón
+        document.addEventListener('mouseup', stopHold);
+        document.addEventListener('touchend', stopHold, { passive: true });
     }
     
     /**
