@@ -64,6 +64,8 @@ export class CommandSender {
             return this._simulateCommand(command);
         } else {
             try {
+                // Mapa optimista: si no hay telemetría POS, estimar movimiento por comandos
+                this._applyOptimisticMotion(command);
                 await this.connection.send(command);
                 return { success: true, command };
             } catch (error) {
@@ -103,14 +105,20 @@ export class CommandSender {
         }
         
         // Cambio de modo
-        if (command === 'M:0') state.setMode('IDLE');
-        else if (command === 'M:1') {
+        // Arduino: E:0..3
+        if (command === 'E:0') state.setMode('IDLE');
+        else if (command === 'E:1') {
             state.setMode('EXPLORANDO');
             this._startAutoSimulation();
         }
-        else if (command === 'M:2') {
+        else if (command === 'E:2') {
             state.setMode('MANUAL');
             this._stopAutoSimulation();
+        }
+        else if (command === 'E:3') {
+            state.setMode('BAILANDO');
+            state.addLogMessage('¡Baile de celebración!');
+            setTimeout(() => state.setMode('IDLE'), 3000);
         }
         
         if (command === 'S') state.addLogMessage('Robot detenido');
@@ -124,6 +132,15 @@ export class CommandSender {
         if (command === 'D:2') state.addLogMessage('Escaneo en progreso...');
         if (command === 'BEEP') state.addLogMessage('Beep!');
         if (command === 'RESET') state.reset();
+    }
+
+    _applyOptimisticMotion(command) {
+        // Normalizar (por si llega con '\n')
+        const cmd = (command || '').trim();
+        const move = this._movementCommands[cmd];
+        if (move) {
+            this.state.updatePosition(move.dx, move.dy, move.rot);
+        }
     }
     
     _startAutoSimulation() {

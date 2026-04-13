@@ -51,9 +51,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const recorder = new MissionRecorder(robotState, commandSender);
     const pwa = new PWAManager();
     
-    // Heartbeat periódico
+    // Keepalive periódico (evita timeout de MANUAL en Arduino)
     setInterval(() => {
-        if (robotState.connected && !commandSender.isSimulation) {
+        if (commandSender.isConnected) {
             commandSender.send(protocol.getPing());
         }
     }, 2000);
@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // INICIALIZACIÓN FINAL
     // ═══════════════════════════════════════════════════
     setTimeout(() => {
-        robotState.setConnected(true);
+        // No marcar conectado por defecto: solo cuando haya conexión real
         uiController.showMessage('🦕 Paleo Rover v2.0 listo. Producción activada.');
         protocol.requestNotificationPermission();
         updateMissionList();

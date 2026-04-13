@@ -120,8 +120,9 @@ export class EventHandlers {
         const btnAuto = document.getElementById('btnAuto');
         const btnManual = document.getElementById('btnManual');
         
-        btnAuto.addEventListener('click', () => this.sender.send('M:1'));
-        btnManual.addEventListener('click', () => this.sender.send('M:2'));
+        // Arduino: E:1=AUTO(EXPLORANDO), E:2=MANUAL
+        btnAuto.addEventListener('click', () => this.sender.send('E:1'));
+        btnManual.addEventListener('click', () => this.sender.send('E:2'));
     }
     
     /**
@@ -166,7 +167,8 @@ export class EventHandlers {
      */
     _setupActionButtons() {
         const actions = {
-            'btnDance': 'D:1', 'btnScan': 'D:2',
+            // Arduino: E:3 = BAILANDO; D:* = scan servo
+            'btnDance': 'E:3', 'btnScan': 'D:2',
             'btnBeep': 'BEEP', 'btnReset': 'RESET'
         };
         
