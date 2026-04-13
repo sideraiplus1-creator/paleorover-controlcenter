@@ -141,7 +141,7 @@ export class EventHandlers {
             btn.addEventListener('click', async () => {
                 // Si está en simulación y no es MANUAL, cambiar modo
                 if (this.sender.isSimulation && this.state.mode !== 'MANUAL') {
-                    await this.sender.send('M:2'); // Cambiar a MANUAL primero
+                    await this.sender.send('E:2'); // Cambiar a MANUAL primero
                 }
                 this.sender.send(command);
             });
@@ -150,7 +150,7 @@ export class EventHandlers {
                 e.preventDefault();
                 // Si está en simulación y no es MANUAL, cambiar modo
                 if (this.sender.isSimulation && this.state.mode !== 'MANUAL') {
-                    await this.sender.send('M:2'); // Cambiar a MANUAL primero
+                    await this.sender.send('E:2'); // Cambiar a MANUAL primero
                 }
                 this.sender.send(command);
                 btn.style.transform = 'scale(0.95)';
