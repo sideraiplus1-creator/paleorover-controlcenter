@@ -340,25 +340,9 @@ export class ConnectionManager {
     // ═══════════════════════════════════════════════════════
 
     _startHeartbeat() {
-        this._stopHeartbeat(); // Limpiar anterior si existe
-        this._heartbeatInterval = setInterval(async () => {
-            if (this.type !== 'bluetooth' || !this.device) return;
-            
-            try {
-                // Enviar byte vacío para mantener conexión viva
-                if (this.characteristic && this.server?.connected) {
-                    const encoder = new TextEncoder();
-                    if (this.characteristic.writeValueWithoutResponse) {
-                        await this.characteristic.writeValueWithoutResponse(
-                            encoder.encode('\n')
-                        );
-                    }
-                }
-            } catch (e) {
-                console.warn('Heartbeat falló:', e.message);
-                // No desconectar aquí, dejar que gattserverdisconnected lo maneje
-            }
-        }, 3000); // Cada 3 segundos
+        // Deshabilitado: el keepalive se envía desde `js/main.js` (P cada ~2s).
+        // En algunos Android/Brave, escribir desde dos timers distintos puede tumbar el GATT.
+        this._stopHeartbeat();
     }
 
     _stopHeartbeat() {
