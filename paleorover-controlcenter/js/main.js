@@ -9,7 +9,8 @@ import { UIController } from './modules/uicontroller.js';
 import { MapRenderer } from './modules/maprenderer.js';
 import { CommandSender } from './modules/commandsender.js';
 import { EventHandlers } from './modules/eventhandlers.js';
-import { ProtocolHandler } from './modules/protocolhandler.js';
+// NOTE: ProtocolHandler desactivado temporalmente - Bug #13
+// import { ProtocolHandler } from './modules/protocolhandler.js';
 import { StorageManager } from './modules/storagemanager.js';
 import { AudioFeedback } from './modules/audiofeedback.js';
 import { ChartManager } from './modules/chartmanager.js';
@@ -44,19 +45,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const savedData = storage.load();
     if (savedData) storage.restoreDiscoveries(savedData);
     
-    // ═══════════════════════════════════════════════════
-    // FASE 5: PRODUCCIÓN
-    // ═══════════════════════════════════════════════════
-    const protocol = new ProtocolHandler(robotState);
-    const recorder = new MissionRecorder(robotState, commandSender);
-    const pwa = new PWAManager();
-    
-    // Heartbeat periódico
-    setInterval(() => {
-        if (robotState.connected && !commandSender.isSimulation) {
-            commandSender.send(protocol.getPing());
-        }
-    }, 5000);
+  // ═══════════════════════════════════════════════════
+  // FASE 5: PRODUCCIÓN
+  // ═══════════════════════════════════════════════════
+  // NOTE: ProtocolHandler desactivado - Bug #13
+  // const protocol = new ProtocolHandler(robotState);
+  const recorder = new MissionRecorder(robotState, commandSender);
+  const pwa = new PWAManager();
+
+  // Heartbeat periódico (usando nuevo sendPing en CommandSender)
+  setInterval(() => {
+    if (robotState.connected && !commandSender.isSimulation) {
+      commandSender.sendPing();
+    }
+  }, 5000);
     
     // ═══════════════════════════════════════════════════
     // UI - BOTONES DE EXPORTACIÓN (FASE 4)
@@ -103,11 +105,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         robotState.addLogMessage('🔧 Calibración IR iniciada');
     });
     
-    // Notificaciones
-    document.getElementById('btnNotify')?.addEventListener('click', () => {
-        protocol.requestNotificationPermission();
-        robotState.addLogMessage('🔔 Notificaciones activadas');
-    });
+  // Notificaciones
+  document.getElementById('btnNotify')?.addEventListener('click', () => {
+    // NOTE: ProtocolHandler desactivado - Bug #13
+    // protocol.requestNotificationPermission();
+    // REPLACEMENT: Solicitar permisos manualmente
+    if ('Notification' in window && Notification.requestPermission) {
+      Notification.requestPermission().then(permission => {
+        robotState.addLogMessage(`🔔 Permiso de notificación: ${permission}`);
+      });
+    }
+  });
     
     // ═══════════════════════════════════════════════════
     // ACTUALIZAR ESTADÍSTICAS EN TIEMPO REAL
@@ -131,33 +139,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ═══════════════════════════════════════════════════
     // INICIALIZACIÓN FINAL
     // ═══════════════════════════════════════════════════
-    setTimeout(() => {
-        uiController.showMessage('🦕 Paleo Rover v3.1 listo. Producción activada.');
-        protocol.requestNotificationPermission();
-    }, 500);
+setTimeout(() => {
+    uiController.showMessage('🦕 Paleo Rover v3.1 listo. Producción activada.');
+    // NOTE: ProtocolHandler desactivado - Bug #13
+    // protocol.requestNotificationPermission();
+  }, 500);
     
-    // ═══════════════════════════════════════════════════
-    // API GLOBAL COMPLETA
-    // ═══════════════════════════════════════════════════
-    window.paleoRover = {
-        // Core
-        state: robotState,
-        ui: uiController,
-        map: mapRenderer,
-        sender: commandSender,
-        
-        // Fase 4
-        storage: storage,
-        audio: audio,
-        charts: charts,
-        
-        // Fase 5
-        protocol: protocol,
-        recorder: recorder,
-        pwa: pwa,
-        
-        // Métodos
-        connect: (type) => commandSender.connectReal(type),
+  // ═══════════════════════════════════════════════════
+  // API GLOBAL COMPLETA
+  // ═══════════════════════════════════════════════════
+  window.paleoRover = {
+    // Core
+    state: robotState,
+    ui: uiController,
+    map: mapRenderer,
+    sender: commandSender,
+
+    // Fase 4
+    storage: storage,
+    audio: audio,
+    charts: charts,
+
+    // Fase 5
+    // NOTE: ProtocolHandler desactivado - Bug #13
+    // protocol: protocol,
+    recorder: recorder,
+    pwa: pwa,
+
+    // Métodos
+    connect: (type) => commandSender.connectReal(type),
         disconnect: () => commandSender.disconnect(),
         export: (format) => storage.generateReport(format),
         record: () => recorder.startRecording(),

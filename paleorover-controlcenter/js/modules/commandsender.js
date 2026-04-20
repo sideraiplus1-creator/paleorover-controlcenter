@@ -240,11 +240,18 @@ export class CommandSender {
     /**
      * Desactiva el modo simulación automática
      */
-    disableSimulation() {
-        this._stopAutoSimulation();
-        this.state.setMode('IDLE');
-        this.state.addLogMessage('⏹ Simulación detenida');
-        console.log('⏹ Simulación detenida.');
-        return true;
-    }
+  disableSimulation() {
+    this._stopAutoSimulation();
+    this.state.setMode('IDLE');
+    this.state.addLogMessage('⏹ Simulación detenida');
+    console.log('⏹ Simulación detenida.');
+    return true;
+  }
+
+  /**
+   * Envía ping keepalive al robot
+   */
+  sendPing() {
+    return this.send('P');
+  }
 }

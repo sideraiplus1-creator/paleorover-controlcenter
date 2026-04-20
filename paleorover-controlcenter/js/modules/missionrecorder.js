@@ -136,12 +136,11 @@ export class MissionRecorder {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
     
-    _applyEvent(entry) {
-        switch (entry.event) {
-            case 'position':
-                this.state._state.position = { ...entry.value };
-                this.state._notify('position', entry.value);
-                break;
+  _applyEvent(entry) {
+    switch (entry.event) {
+      case 'position':
+        this.state.setPosition({ x: entry.value.x, y: entry.value.y });
+        break;
             case 'mode':
                 this.state.setMode(entry.value);
                 break;

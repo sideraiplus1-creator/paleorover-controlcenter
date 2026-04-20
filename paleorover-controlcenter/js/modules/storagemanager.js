@@ -59,32 +59,18 @@ export class StorageManager {
         }
     }
     
-    /**
-     * Restaura hallazgos y ruta guardados
-     */
-    restoreDiscoveries(data) {
-        if (!data) return;
-        
-        this.state._state.discoveries = Array.isArray(data.discoveries)
-            ? data.discoveries.map(d => ({
-                ...d,
-                position: d.position ? { x: d.position.x, y: d.position.y } : { x: 0, y: 0 }
-            }))
-            : [];
-        
-        this.state._trail = Array.isArray(data.trail)
-            ? data.trail.map(point => ({ x: point.x, y: point.y }))
-            : [{ x: 150, y: 150 }];
-        
-        this.state._state.position = data.position
-            ? { x: data.position.x, y: data.position.y }
-            : this.state._trail[this.state._trail.length - 1] || { x: 150, y: 150 };
-        
-        this.state._state.angle = typeof data.angle === 'number' ? data.angle : 0;
-        
-        this.state._notify('reset', null);
-        this.state.addLogMessage('📥 Expedición restaurada desde el guardado');
-    }
+  /**
+   * Restaura hallazgos y ruta guardados
+   */
+  restoreDiscoveries(data) {
+    if (!data) return;
+
+    this.state.setDiscoveries(data.discoveries || []);
+    this.state.setTrail(data.trail || [{ x: 150, y: 150 }]);
+    this.state.setPosition(data.position, data.angle);
+
+    this.state.addLogMessage('📥 Expedición restaurada desde el guardado');
+  }
     
     // ═══════════════════════════════════════════════════════
     // EXPORTACIÓN DE REPORTES

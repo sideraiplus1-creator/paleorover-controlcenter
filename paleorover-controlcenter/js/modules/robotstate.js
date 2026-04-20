@@ -167,13 +167,52 @@ export class RobotState {
         this._notify('discovery', discovery);
         this._addLog(`¡HALLAZGO #${discovery.number} detectado!`);
         
-        return discovery;
-    }
-    
-    /**
-     * Resetea la expedición
-     */
-    reset() {
+    return discovery;
+  }
+
+  /**
+   * Establece los hallazgos (para restaurar desde storage)
+   * @param {Array} discoveries - Array de objetos de hallazgo
+   */
+  setDiscoveries(discoveries) {
+    this._state.discoveries = Array.isArray(discoveries)
+      ? discoveries.map(d => ({
+          ...d,
+          position: d.position ? { x: d.position.x, y: d.position.y } : { x: 0, y: 0 }
+        }))
+      : [];
+    this._state.findCount = this._state.discoveries.length;
+    this._notify('discoveries', this._state.discoveries);
+  }
+
+  /**
+   * Establece el trail completo (para restaurar desde storage)
+   * @param {Array} trail - Array de puntos {x, y}
+   */
+  setTrail(trail) {
+    this._trail = Array.isArray(trail)
+      ? trail.map(point => ({ x: point.x, y: point.y }))
+      : [{ x: 150, y: 150 }];
+    this._notify('trail', this._trail);
+  }
+
+  /**
+   * Establece posición y ángulo del robot (para restaurar/reproducir)
+   * @param {Object} position - {x, y}
+   * @param {number} angle - Ángulo en grados
+   */
+  setPosition(position, angle = 0) {
+    this._state.position = position
+      ? { x: position.x, y: position.y }
+      : this._trail[this._trail.length - 1] || { x: 150, y: 150 };
+    this._state.angle = typeof angle === 'number' ? angle : 0;
+    this._notify('position', this._state.position);
+  }
+
+  /**
+   * Resetea la expedición
+   */
+  reset() {
         this._state.discoveries = [];
         this._state.findCount = 0;
         this._trail = [{ x: 150, y: 150 }];
