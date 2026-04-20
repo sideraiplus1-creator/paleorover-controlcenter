@@ -118,14 +118,55 @@ export class EventHandlers {
             'btnLeft': 'L', 'btnRight': 'R'
         };
         let holdInterval = null;
+        let moveStartTime = null;
+        let currentMoveCmd = null;
 
-  const stopMove = () => {
-    if (holdInterval) { clearInterval(holdInterval); holdInterval = null; }
-    // FIX: solo enviar S si estamos en modo MANUAL (evita spam y timeout)
-    if (this.state.mode === 'MANUAL') {
-      this.sender.send('S');
-    }
-  };
+        // Visual tracking: calibración del robot
+        // Estimación: velocidad 100 = ~10 pixels/segundo en el canvas
+        const PIXELS_PER_SECOND = 15; // Ajustable según la velocidad real del robot
+        const ROTATION_PER_SECOND = 30; // Grados por segundo en giros
+
+        const stopMove = () => {
+            if (holdInterval) { clearInterval(holdInterval); holdInterval = null; }
+            
+            // Calcular tiempo de movimiento para tracking visual
+            if (moveStartTime && currentMoveCmd) {
+                const duration = (Date.now() - moveStartTime) / 1000; // segundos
+                this._calculateVisualMove(currentMoveCmd, duration);
+                moveStartTime = null;
+                currentMoveCmd = null;
+            }
+            
+            // FIX: solo enviar S si estamos en modo MANUAL (evita spam y timeout)
+            if (this.state.mode === 'MANUAL') {
+                this.sender.send('S');
+            }
+        };
+
+        // Calcular movimiento visual basado en tiempo + ángulo actual
+        this._calculateVisualMove = (cmd, duration) => {
+            let deltaX = 0, deltaY = 0, rotation = 0;
+            
+            const pixelsMoved = PIXELS_PER_SECOND * duration;
+            
+            switch(cmd) {
+                case 'F': // Forward - mover en dirección del ángulo actual
+                    deltaY = -pixelsMoved; // Negativo porque Y crece hacia abajo en canvas
+                    break;
+                case 'B': // Backward
+                    deltaY = pixelsMoved;
+                    break;
+                case 'L': // Left - rotar
+                    rotation = -ROTATION_PER_SECOND * duration;
+                    break;
+                case 'R': // Right - rotar
+                    rotation = ROTATION_PER_SECOND * duration;
+                    break;
+            }
+            
+            // Actualizar posición en el estado (esto redibuja el mapa)
+            this.state.updatePosition(deltaX, deltaY, rotation);
+        };
 
         // FIX v3.5: Simplificado para evitar colisiones BLE
         const startMove = async (cmd) => {
@@ -142,6 +183,11 @@ export class EventHandlers {
                     btnScan.classList.remove('active');
                 }
             }
+            
+            // Iniciar tracking visual
+            moveStartTime = Date.now();
+            currentMoveCmd = cmd;
+            
             this.sender.send(cmd);
             if (holdInterval) clearInterval(holdInterval);
             holdInterval = setInterval(() => this.sender.send(cmd), 500);

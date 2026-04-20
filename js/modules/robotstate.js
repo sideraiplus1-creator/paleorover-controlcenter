@@ -120,20 +120,16 @@ export class RobotState {
         }
     }
     
-  /**
-   * Actualiza posición del robot en el mapa
-   * @param {number} deltaX - movimiento en X (-1 a 1)
-   * @param {number} deltaY - movimiento en Y (-1 a 1)
-   * @param {number} rotation - rotación en grados
-   * @param {boolean} fromArduino - true si viene de mensaje POS: del Arduino
-   */
-  updatePosition(deltaX, deltaY, rotation = 0, fromArduino = false) {
-    // Bug #11 Fix: Solo actualizar posición si viene del Arduino (POS:)
-    // Si no hay POS: del Arduino, el mapa debe quedarse estático
-    if (!fromArduino) {
-      // Odometría no disponible - no actualizar posición
-      return;
-    }
+    /**
+     * Actualiza posición del robot en el mapa
+     * @param {number} deltaX - movimiento en X (-1 a 1)
+     * @param {number} deltaY - movimiento en Y (-1 a 1)
+     * @param {number} rotation - rotación en grados
+     * @param {boolean} fromArduino - true si viene de mensaje POS: del Arduino
+     */
+    updatePosition(deltaX, deltaY, rotation = 0, fromArduino = false) {
+        // Visual tracking: Ahora permitimos actualización de posición incluso
+        // sin mensajes POS: del Arduino, usando estimación basada en tiempo y ángulo
 
     // Actualizar ángulo
     this._state.angle = (this._state.angle + rotation) % 360;

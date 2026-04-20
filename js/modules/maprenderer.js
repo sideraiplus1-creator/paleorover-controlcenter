@@ -147,22 +147,15 @@ export class MapRenderer {
         });
     }
     
-  /**
-   * Dibuja el robot con dirección
-   */
-  _drawRobot() {
-    const { ctx, config } = this;
-    const { x, y } = this.state.position;
-    const angle = this.state.angle;
+    /**
+     * Dibuja el robot con dirección
+     */
+    _drawRobot() {
+        const { ctx, config } = this;
+        const { x, y } = this.state.position;
+        const angle = this.state.angle;
 
-    // FIX: Mostrar mensaje si estamos en MANUAL sin odometría real
-    if (this.state.mode === 'MANUAL' && this.state.trail.length <= 1) {
-      ctx.fillStyle = 'rgba(196, 163, 90, 0.7)';
-      ctx.font = 'bold 14px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Odometría no disponible en modo MANUAL', this.canvas.width / 2, this.canvas.height / 2);
-      return;
-    }
+        // FIX: Removed anterior mensaje "Odometría no disponible" - ahora tenemos tracking visual
         
         // Guardar contexto para rotar
         ctx.save();

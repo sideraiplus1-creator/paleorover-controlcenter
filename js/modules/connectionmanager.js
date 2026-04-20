@@ -439,11 +439,34 @@ export class ConnectionManager {
                 break;
             }
 
-            case 'ANG': {
-                const angle = parseInt(value, 10);
-                if (!isNaN(angle) && this.state.setServoAngle) this.state.setServoAngle(angle);
-                break;
-            }
+    case 'ANG': {
+      const angle = parseInt(value, 10);
+      if (!isNaN(angle)) {
+        if (this.state.setServoAngle) this.state.setServoAngle(angle);
+        
+        // Visual tracking: El ángulo del servo también indica la dirección del robot
+        // en modo AUTO. Actualizamos el ángulo del mapa aquí.
+        if (this.state.setPosition && !this.state.setServoAngle.cacheAngle) {
+          // Guardar el ángulo pero ajustarlo porque el servo gira 0-180
+          // El ángulo 90 es centro, 0 es izquierda, 180 es derecha
+          // Para el mapa: 0 = arriba, positivo hacia derecha
+          const robotAngle = angle - 90; // 90 grados = 0 en el mapa (arriba)
+          this.state.setPosition(this.state.position, robotAngle);
+        }
+        
+        // En modo EXPLORANDO, simular movimiento hacia adelante basado en el ángulo
+        // Cuando el robot está explorando, asumimos que se mueve hacia donde apunta el servo
+        if (this.state.mode === 'EXPLORANDO' && this.state.updatePosition) {
+          // Pequeño movimiento hacia adelante en la dirección del ángulo
+          const moveSpeed = 2; // pixels por tick
+          const rad = (angle - 90) * Math.PI / 180;
+          const dx = -Math.sin(rad) * moveSpeed;
+          const dy = -Math.cos(rad) * moveSpeed; // Negativo porque Y crece hacia abajo
+          this.state.updatePosition(dx, dy, 0);
+        }
+      }
+      break;
+    }
 
             case 'VEL': {
                 // FIX: parsear VEL:manual,auto
