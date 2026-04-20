@@ -1,12 +1,12 @@
 /**
  * ProtocolHandler.js
- * Protocolo Rover-Paleo v2.0 - Comunicación robusta Arduino ↔ Web
+ * Protocolo Rover-Paleo v3.1 - Comunicación robusta Arduino ↔ Web
  */
 
 export class ProtocolHandler {
-    constructor(robotState) {
-        this.state = robotState;
-        this.version = '2.0';
+  constructor(robotState) {
+    this.state = robotState;
+    this.version = '3.1';
         
         // Buffer de recepción
         this.rxBuffer = '';
