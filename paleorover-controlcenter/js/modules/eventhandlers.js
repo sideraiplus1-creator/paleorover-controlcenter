@@ -188,20 +188,21 @@ export class EventHandlers {
             });
         }
 
-        // FIX: btnScan = toggle unificado de búsqueda (fusiona btnScan + btnToggleSearch)
-        // OFF por defecto en MANUAL, toggle en AUTO
-        const btnScan = document.getElementById('btnScan');
-        if (btnScan) {
-            btnScan.addEventListener('click', () => {
-                const isActive = btnScan.dataset.active === 'true';
-                const newState = !isActive;
-                btnScan.dataset.active = String(newState);
-                btnScan.querySelector('.btn-text').textContent = newState ? 'Búsqueda: ON' : 'Búsqueda: OFF';
-                btnScan.classList.toggle('active', newState);
-                // D:1 activa servo, D:0 lo detiene y centra
-                this.sender.send(newState ? 'D:1' : 'D:0');
-            });
-        }
+  // FIX: btnScan = toggle unificado de búsqueda (lógica invertida)
+  // "Búsqueda: ON" = servo DETENIDO (para lecturas IR estáticas de fósiles)
+  // "Búsqueda: OFF" = servo ESCANEANDO (navegación normal)
+  const btnScan = document.getElementById('btnScan');
+  if (btnScan) {
+    btnScan.addEventListener('click', () => {
+      const isActive = btnScan.dataset.active === 'true';
+      const newState = !isActive;
+      btnScan.dataset.active = String(newState);
+      btnScan.querySelector('.btn-text').textContent = newState ? 'Búsqueda: ON' : 'Búsqueda: OFF';
+      btnScan.classList.toggle('active', newState);
+      // FIX invertido: Búsqueda ON = D:0 (servo detenido), Búsqueda OFF = D:1 (servo activo)
+      this.sender.send(newState ? 'D:0' : 'D:1');
+    });
+  }
 
         // BEEP
         const btnBeep = document.getElementById('btnBeep');
