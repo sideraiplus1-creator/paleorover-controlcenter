@@ -84,10 +84,11 @@ export class ConnectionManager {
     this.state.setConnected(true);
     // Bug #10: Guardar preferencia de conexión
     this._saveConnectionPreference('serial');
-            this.state.addLogMessage('✅ Conectado por USB-Serial a 9600 baud');
-            this._startSerialRead();
-            this._startWatchdog();
-            return true;
+      this.state.addLogMessage('✅ Conectado por USB-Serial a 9600 baud');
+      this._startSerialRead();
+      this._startWatchdog();
+      this._startHeartbeat();
+      return true;
         } catch (error) {
             this.state.addLogMessage(`❌ Error Serial: ${error.message}`);
             return false;
@@ -422,15 +423,13 @@ export class ConnectionManager {
                 break;
             }
 
-            case 'POS': {
-                const [x, y, angle] = value.split(',').map(Number);
-                if (!isNaN(x) && !isNaN(y)) {
-                    this.state._state.position = { x, y };
-                    this.state._state.angle = angle || 0;
-                    this.state._notify('position', this.state.position);
-                }
-                break;
-            }
+    case 'POS': {
+      const [x, y, angle] = value.split(',').map(Number);
+      if (!isNaN(x) && !isNaN(y)) {
+        this.state.setPosition({ x, y }, angle);
+      }
+      break;
+    }
 
             case 'LOG':
                 this.state.addLogMessage(`[Robot] ${value}`);

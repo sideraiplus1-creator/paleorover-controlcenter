@@ -119,10 +119,13 @@ export class EventHandlers {
         };
         let holdInterval = null;
 
-        const stopMove = () => {
-            if (holdInterval) { clearInterval(holdInterval); holdInterval = null; }
-            this.sender.send('S');
-        };
+  const stopMove = () => {
+    if (holdInterval) { clearInterval(holdInterval); holdInterval = null; }
+    // FIX: solo enviar S si estamos en modo MANUAL (evita spam y timeout)
+    if (this.state.mode === 'MANUAL') {
+      this.sender.send('S');
+    }
+  };
 
         // FIX v3.5: Simplificado para evitar colisiones BLE
         const startMove = async (cmd) => {

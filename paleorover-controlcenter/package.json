@@ -1,0 +1,16 @@
+{
+  "name": "paleorover-controlcenter",
+  "version": "1.0.0",
+  "description": "Una interfaz web moderna de control para un robot paleontológico basado en Arduino. Control de exploración con mapas en tiempo real, detección de fósiles, múltiples modos de operación, sonidos, gráficos y exportación de datos.",
+  "main": "pwamanager.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@executeautomation/playwright-mcp-server": "^1.0.12",
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  }
+}
