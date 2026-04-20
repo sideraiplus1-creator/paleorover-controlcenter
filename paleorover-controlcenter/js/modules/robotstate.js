@@ -120,36 +120,44 @@ export class RobotState {
         }
     }
     
-    /**
-     * Actualiza posición del robot en el mapa
-     * @param {number} deltaX - movimiento en X (-1 a 1)
-     * @param {number} deltaY - movimiento en Y (-1 a 1)
-     * @param {number} rotation - rotación en grados
-     */
-    updatePosition(deltaX, deltaY, rotation = 0) {
-        // Actualizar ángulo
-        this._state.angle = (this._state.angle + rotation) % 360;
-        
-        // Calcular nueva posición basada en ángulo
-        const rad = (this._state.angle - 90) * Math.PI / 180;
-        const speed = 2; // velocidad de simulación
-        
-        const newX = this._state.position.x + Math.cos(rad) * deltaY * speed - Math.sin(rad) * deltaX * speed;
-        const newY = this._state.position.y + Math.sin(rad) * deltaY * speed + Math.cos(rad) * deltaX * speed;
-        
-        // Limitar al canvas (300x300 con margen de 10)
-        this._state.position.x = Math.max(10, Math.min(290, newX));
-        this._state.position.y = Math.max(10, Math.min(290, newY));
-        
-        // Agregar al rastro cada 5 movimientos
-        if (this._trail.length === 0 || 
-            Math.hypot(this._state.position.x - this._trail[this._trail.length-1].x,
-                      this._state.position.y - this._trail[this._trail.length-1].y) > 5) {
-            this._trail.push({ ...this._state.position });
-        }
-        
-        this._notify('position', this._state.position);
+  /**
+   * Actualiza posición del robot en el mapa
+   * @param {number} deltaX - movimiento en X (-1 a 1)
+   * @param {number} deltaY - movimiento en Y (-1 a 1)
+   * @param {number} rotation - rotación en grados
+   * @param {boolean} fromArduino - true si viene de mensaje POS: del Arduino
+   */
+  updatePosition(deltaX, deltaY, rotation = 0, fromArduino = false) {
+    // Bug #11 Fix: Solo actualizar posición si viene del Arduino (POS:)
+    // Si no hay POS: del Arduino, el mapa debe quedarse estático
+    if (!fromArduino) {
+      // Odometría no disponible - no actualizar posición
+      return;
     }
+
+    // Actualizar ángulo
+    this._state.angle = (this._state.angle + rotation) % 360;
+
+    // Calcular nueva posición basada en ángulo
+    const rad = (this._state.angle - 90) * Math.PI / 180;
+    const speed = 2; // velocidad de simulación
+
+    const newX = this._state.position.x + Math.cos(rad) * deltaY * speed - Math.sin(rad) * deltaX * speed;
+    const newY = this._state.position.y + Math.sin(rad) * deltaY * speed + Math.cos(rad) * deltaX * speed;
+
+    // Limitar al canvas (300x300 con margen de 10)
+    this._state.position.x = Math.max(10, Math.min(290, newX));
+    this._state.position.y = Math.max(10, Math.min(290, newY));
+
+    // Agregar al rastro cada 5 movimientos
+    if (this._trail.length === 0 ||
+        Math.hypot(this._state.position.x - this._trail[this._trail.length-1].x,
+                   this._state.position.y - this._trail[this._trail.length-1].y) > 5) {
+      this._trail.push({ ...this._state.position });
+    }
+
+    this._notify('position', this._state.position);
+  }
     
     /**
      * Registra un nuevo hallazgo

@@ -28,6 +28,11 @@ export class ConnectionManager {
     this._commandQueue = [];
     this._sending = false;
 
+    // Bug #12: ACK tracking para comandos críticos
+    this._pendingAcks = new Map();
+    this._criticalCommands = ['F', 'B', 'L', 'R', 'S'];
+    this._ackTimeoutMs = 2000;
+
     // FIX: watchdog — "Sin respuesta" solo si no llega NADA en 4s
     this._lastRxTime = Date.now();
     this._watchdogInterval = null;
@@ -234,11 +239,45 @@ export class ConnectionManager {
     // ENVÍO DE COMANDOS
     // ═══════════════════════════════════════════════════════
 
-    async send(command) {
-        const fullCommand = command.endsWith('\n') ? command : command + '\n';
-        this._commandQueue.push(fullCommand);
-        if (!this._sending) await this._processQueue();
+  async send(command) {
+    const fullCommand = command.endsWith('\n') ? command : command + '\n';
+
+    // Bug #12: Rastrear comandos críticos para ACK
+    const cmdKey = fullCommand.trim();
+    if (this._criticalCommands.includes(cmdKey)) {
+      this._pendingAcks.set(cmdKey, { timestamp: Date.now(), logged: false });
+      // Iniciar timer para verificar timeout
+      setTimeout(() => this._checkAckTimeout(cmdKey), this._ackTimeoutMs);
     }
+
+    this._commandQueue.push(fullCommand);
+    if (!this._sending) await this._processQueue();
+  }
+
+  /**
+   * Bug #12: Verificar si un comando crítico recibió ACK
+   */
+  _checkAckTimeout(cmdKey) {
+    const pending = this._pendingAcks.get(cmdKey);
+    if (!pending) return; // Ya fue confirmado
+
+    if (!pending.logged) {
+      pending.logged = true;
+      console.warn(`⚠️ ACK timeout: Comando '${cmdKey}' no confirmado en ${this._ackTimeoutMs}ms`);
+      this.state.addLogMessage(`⚠️ Comando '${cmdKey}' sin confirmación`);
+    }
+    this._pendingAcks.delete(cmdKey);
+  }
+
+  /**
+   * Bug #12: Procesar ACK recibido
+   */
+  _processAck(cmdKey) {
+    if (this._pendingAcks.has(cmdKey)) {
+      console.log(`✅ ACK recibido: ${cmdKey}`);
+      this._pendingAcks.delete(cmdKey);
+    }
+  }
 
     async _processQueue() {
         if (this._sending || this._commandQueue.length === 0) return;
@@ -435,15 +474,20 @@ export class ConnectionManager {
                 this.state.addLogMessage(`[Robot] ${value}`);
                 break;
 
-            // FIX: P:OK, BEEP:OK, RESET:OK, SCAN:ON/OFF → solo log, no "desconocido"
-            case 'P':
-            case 'BEEP':
-            case 'RESET':
-            case 'SCAN':
-            case 'MSG':
-            case 'ERR':
-                this.state.addLogMessage(`RX: ${message}`);
-                break;
+    // FIX: P:OK, BEEP:OK, RESET:OK, SCAN:ON/OFF → solo log, no "desconocido"
+    case 'P':
+    case 'BEEP':
+    case 'RESET':
+    case 'SCAN':
+    case 'MSG':
+    case 'ERR':
+      // Bug #12: Procesar ACK de comandos críticos (P:OK = ACK de ping y movimiento si está en modo manual)
+      if (key === 'P' && value === 'OK') {
+        // P:OK puede ser ACK de cualquier comando, pero principalmente de movimiento F/B/L/R/S
+        ['F', 'B', 'L', 'R', 'S'].forEach(cmd => this._processAck(cmd));
+      }
+      this.state.addLogMessage(`RX: ${message}`);
+      break;
 
             default:
                 this.state.addLogMessage(`RX: ${message}`);
