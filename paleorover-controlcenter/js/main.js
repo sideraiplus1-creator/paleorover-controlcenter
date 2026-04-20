@@ -181,6 +181,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('click', unlockAudio);
     document.addEventListener('touchstart', unlockAudio);
     
-    console.log('✅ Paleo Rover v2.0 cargado');
+console.log('✅ Paleo Rover v3.1 cargado');
     console.log('Comandos: paleoRover.connect(), .record(), .playMission(), .calibrate()');
 });

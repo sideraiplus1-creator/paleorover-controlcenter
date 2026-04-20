@@ -4,18 +4,19 @@
  */
 
 export class AudioFeedback {
-    constructor(robotState) {
-        this.state = robotState;
-        this.enabled = true;
-        this.volume = 0.3;
-        this._initialized = false;
-        
-        this.audioContext = null;
-        this._setupUserInteraction();
-        
-        // Suscribirse a eventos
-        this._subscribeToEvents();
-    }
+  constructor(robotState) {
+    this.state = robotState;
+    this.enabled = true;
+    this.volume = 0.3;
+    this._initialized = false;
+    this._unsubscribe = null;
+
+    this.audioContext = null;
+    this._setupUserInteraction();
+
+    // Suscribirse a eventos
+    this._subscribeToEvents();
+  }
     
     _initAudio() {
         try {
@@ -45,11 +46,11 @@ export class AudioFeedback {
         document.addEventListener('keydown', initAudio);
     }
     
-    _subscribeToEvents() {
-        // Contador para no reproducir sonido de movimiento en cada tick
-        this._moveCounter = 0;
+  _subscribeToEvents() {
+    // Contador para no reproducir sonido de movimiento en cada tick
+    this._moveCounter = 0;
 
-        this.state.subscribe((event, value) => {
+    this._unsubscribe = this.state.subscribe((event, value) => {
             if (!this.enabled) return;
 
             switch (event) {
@@ -191,20 +192,34 @@ export class AudioFeedback {
         this.volume = Math.max(0, Math.min(1, vol));
     }
     
-    /**
-     * Prueba todos los sonidos
-     */
-    testAll() {
-        const sounds = [
-            () => this.playConnectionSound(true),
-            () => this.playDiscoverySound(),
-            () => this.playModeChangeSound('EXPLORANDO'),
-            () => this.playDetectionBeep(),
-            () => this.playConnectionSound(false)
-        ];
-        
-        sounds.forEach((sound, i) => {
-            setTimeout(sound, i * 800);
-        });
+  /**
+   * Prueba todos los sonidos
+   */
+  testAll() {
+    const sounds = [
+      () => this.playConnectionSound(true),
+      () => this.playDiscoverySound(),
+      () => this.playModeChangeSound('EXPLORANDO'),
+      () => this.playDetectionBeep(),
+      () => this.playConnectionSound(false)
+    ];
+
+    sounds.forEach((sound, i) => {
+      setTimeout(sound, i * 800);
+    });
+  }
+
+  /**
+   * Limpia suscripciones y recursos de audio
+   */
+  destroy() {
+    if (this._unsubscribe) {
+      this._unsubscribe();
+      this._unsubscribe = null;
     }
+    if (this.audioContext) {
+      this.audioContext.close().catch(console.warn);
+      this.audioContext = null;
+    }
+  }
 }
