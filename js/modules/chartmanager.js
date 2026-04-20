@@ -17,6 +17,8 @@ export class ChartManager {
         // Datos históricos
         this.distanceHistory = new Array(100).fill(0);
         this.maxHistory = 100;
+        this._smoothed = 0;
+        this._alpha = 0.3;
         
         // Suscribirse a cambios de distancia
         this.state.subscribe((event, value) => {
@@ -30,10 +32,26 @@ export class ChartManager {
     }
     
     _addDataPoint(distance) {
-        this.distanceHistory.push(distance);
+        // Ignorar valores inválidos
+        if (distance < 0 || distance > 400) return;
+
+        const clamped = Math.min(distance, 300);
+        if (this._smoothed === 0) {
+            this._smoothed = clamped;
+        } else {
+            this._smoothed = this._alpha * clamped + (1 - this._alpha) * this._smoothed;
+        }
+
+        const smoothedValue = Math.round(this._smoothed);
+        this.distanceHistory.push(smoothedValue);
         if (this.distanceHistory.length > this.maxHistory) {
             this.distanceHistory.shift();
         }
+    }
+
+    reset() {
+        this.distanceHistory = new Array(this.maxHistory).fill(0);
+        this._smoothed = 0;
     }
     
     _animate() {

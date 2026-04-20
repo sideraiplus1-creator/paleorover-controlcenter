@@ -1,6 +1,0 @@
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Permissions-Policy = "serial=*, usb=*"
-    Cross-Origin-Opener-Policy = "same-origin"
-    Cross-Origin-Embedder-Policy = "credentialless"

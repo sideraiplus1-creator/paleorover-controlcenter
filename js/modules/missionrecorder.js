@@ -80,28 +80,54 @@ export class MissionRecorder {
     // ═══════════════════════════════════════════════════════
     
     async playMission(mission, speed = 1.0) {
-        if (this.isPlaying) return;
-        
-        this.isPlaying = true;
-        this.state.addLogMessage(`▶️ Reproduciendo misión (${speed}x)`);
-        
-        // Resetear estado
-        this.state.reset();
-        
-        for (const entry of mission.data) {
-            if (!this.isPlaying) break;
-            
-            // Esperar hasta el timestamp (ajustado por velocidad)
-            await this._delay(entry.timestamp / speed);
-            
-            // Aplicar evento
-            this._applyEvent(entry);
+        if (this.isPlaying) {
+            console.warn('Ya hay una misión en reproducción');
+            return;
+        }
+
+        if (!mission || !Array.isArray(mission.data) || mission.data.length === 0) {
+            console.error('Misión inválida:', mission);
+            this.state.addLogMessage('❌ Misión inválida');
+            return;
         }
         
-        this.isPlaying = false;
-        this.state.addLogMessage('⏹️ Reproducción completada');
+        this.isPlaying = true;
+        this.state.addLogMessage(`▶️ Reproduciendo: ${mission.name || 'Sin nombre'}`);
+        
+        try {
+            if (this.sender?.setMode) {
+                this.sender.setMode(2);
+            }
+            await this._sleep(500);
+
+            this.state.reset();
+            for (const step of mission.data) {
+                if (!this.isPlaying) break;
+
+                if (step.cmd) {
+                    this.sender.send(step.cmd);
+                } else {
+                    await this._delay(step.timestamp / speed);
+                    this._applyEvent(step);
+                }
+            }
+
+            if (this.sender?.stop) {
+                this.sender.stop();
+            }
+            this.state.addLogMessage('✅ Misión completada');
+        } catch (error) {
+            console.error('Error reproduciendo:', error);
+            this.state.addLogMessage('❌ Error en reproducción');
+        } finally {
+            this.isPlaying = false;
+        }
     }
     
+    _sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     stopPlayback() {
         this.isPlaying = false;
     }
@@ -110,12 +136,11 @@ export class MissionRecorder {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
     
-    _applyEvent(entry) {
-        switch (entry.event) {
-            case 'position':
-                this.state._state.position = { ...entry.value };
-                this.state._notify('position', entry.value);
-                break;
+  _applyEvent(entry) {
+    switch (entry.event) {
+      case 'position':
+        this.state.setPosition({ x: entry.value.x, y: entry.value.y });
+        break;
             case 'mode':
                 this.state.setMode(entry.value);
                 break;
@@ -171,8 +196,22 @@ export class MissionRecorder {
         }
         return missions.sort((a, b) => b.date - a.date);
     }
+
+    getMissions() {
+        return this.listMissions();
+    }
     
-    deleteMission(key) {
-        localStorage.removeItem(key);
+    deleteMission(identifier) {
+        if (typeof identifier === 'number') {
+            const missions = this.listMissions();
+            const mission = missions[identifier];
+            if (mission?.key) {
+                localStorage.removeItem(mission.key);
+            }
+            return;
+        }
+
+        if (!identifier) return;
+        localStorage.removeItem(identifier);
     }
 }

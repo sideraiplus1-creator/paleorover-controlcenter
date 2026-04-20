@@ -34,7 +34,7 @@ const int PIN_ECHO   = A0;
 const int PIN_SERVO  = A2;
 const int PIN_BUZZER = 12;
 
-const int PIN_BT_RX  = 11;
+const int PIN_BT_RX  = 12;
 const int PIN_BT_TX  = 3;
 
 // ═══════════════════════════════════════════════════════════════════════

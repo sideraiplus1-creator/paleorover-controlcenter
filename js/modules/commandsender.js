@@ -10,6 +10,11 @@ export class CommandSender {
         this.state = robotState;
         this.connection = new ConnectionManager(robotState);
         
+        // Velocidades guardadas en localStorage
+        this._speedManual = 180;
+        this._speedAuto = 150;
+        this._loadSpeeds();
+        
         // Modo por defecto
         this._simulationMode = true;
         
@@ -22,11 +27,6 @@ export class CommandSender {
         };
         
         this._autoSimulationInterval = null;
-
-        // Auto-mapa (optimista) cuando el robot está en EXPLORANDO real
-        this._autoMapInterval = null;
-        this._autoMapTickMs = 200; // elegido: medio en dibujo / lento en robot
-        this._startAutoMapLoop();
     }
     
     /**
@@ -46,8 +46,8 @@ export class CommandSender {
         
         if (success) {
             this._simulationMode = false;
-            // Re-activar auto-mapa al reconectar
-            this._startAutoMapLoop();
+            // Enviar velocidades guardadas al conectar
+            this.send(`V:${this._speedManual}`);
         }
         
         return success;
@@ -59,7 +59,6 @@ export class CommandSender {
     async disconnect() {
         await this.connection.disconnect();
         this._simulationMode = true;
-        this._stopAutoMapLoop();
     }
     
     /**
@@ -72,8 +71,6 @@ export class CommandSender {
             return this._simulateCommand(command);
         } else {
             try {
-                // Mapa optimista: si no hay telemetría POS, estimar movimiento por comandos
-                this._applyOptimisticMotion(command);
                 await this.connection.send(command);
                 return { success: true, command };
             } catch (error) {
@@ -85,7 +82,79 @@ export class CommandSender {
             }
         }
     }
-    
+
+  /**
+   * Bug #6: Movimientos solo permitidos en modo MANUAL
+   */
+  forward() {
+    if (this.state.mode !== 'MANUAL') {
+      console.warn('⚠️ forward() solo disponible en modo MANUAL');
+      return Promise.resolve({ success: false, error: 'Modo MANUAL requerido' });
+    }
+    return this.send('F');
+  }
+
+  backward() {
+    if (this.state.mode !== 'MANUAL') {
+      console.warn('⚠️ backward() solo disponible en modo MANUAL');
+      return Promise.resolve({ success: false, error: 'Modo MANUAL requerido' });
+    }
+    return this.send('B');
+  }
+
+  left() {
+    if (this.state.mode !== 'MANUAL') {
+      console.warn('⚠️ left() solo disponible en modo MANUAL');
+      return Promise.resolve({ success: false, error: 'Modo MANUAL requerido' });
+    }
+    return this.send('L');
+  }
+
+  right() {
+    if (this.state.mode !== 'MANUAL') {
+      console.warn('⚠️ right() solo disponible en modo MANUAL');
+      return Promise.resolve({ success: false, error: 'Modo MANUAL requerido' });
+    }
+    return this.send('R');
+  }
+
+  setMode(mode) {
+    return this.send(`E:${mode}`);
+  }
+
+  stop() {
+    return this.send('S');
+  }
+
+    _loadSpeeds() {
+        const savedManual = localStorage.getItem('paleoRover_speedManual');
+        const savedAuto = localStorage.getItem('paleoRover_speedAuto');
+        
+        this._speedManual = savedManual ? parseInt(savedManual, 10) : 180;
+        this._speedAuto = savedAuto ? parseInt(savedAuto, 10) : 150;
+
+        if (this.connection.isConnected()) {
+            this.send(`V:${this._speedManual}`);
+        }
+    }
+
+    setManualSpeed(speed) {
+        this._speedManual = Math.max(80, Math.min(255, speed));
+        localStorage.setItem('paleoRover_speedManual', this._speedManual);
+        this.send(`V:${this._speedManual}`);
+        return this._speedManual;
+    }
+
+    setAutoSpeed(speed) {
+        this._speedAuto = Math.max(80, Math.min(255, speed));
+        localStorage.setItem('paleoRover_speedAuto', this._speedAuto);
+        return this._speedAuto;
+    }
+
+    getSpeeds() {
+        return { manual: this._speedManual, auto: this._speedAuto };
+    }
+
     /**
      * Simulación
      */
@@ -113,7 +182,6 @@ export class CommandSender {
         }
         
         // Cambio de modo
-        // Arduino: E:0..3
         if (command === 'E:0') state.setMode('IDLE');
         else if (command === 'E:1') {
             state.setMode('EXPLORANDO');
@@ -140,15 +208,6 @@ export class CommandSender {
         if (command === 'D:2') state.addLogMessage('Escaneo en progreso...');
         if (command === 'BEEP') state.addLogMessage('Beep!');
         if (command === 'RESET') state.reset();
-    }
-
-    _applyOptimisticMotion(command) {
-        // Normalizar (por si llega con '\n')
-        const cmd = (command || '').trim();
-        const move = this._movementCommands[cmd];
-        if (move) {
-            this.state.updatePosition(move.dx, move.dy, move.rot);
-        }
     }
     
     _startAutoSimulation() {
@@ -180,25 +239,6 @@ export class CommandSender {
         if (this._autoSimulationInterval) {
             clearInterval(this._autoSimulationInterval);
             this._autoSimulationInterval = null;
-        }
-    }
-
-    _startAutoMapLoop() {
-        if (this._autoMapInterval) return;
-        this._autoMapInterval = setInterval(() => {
-            // Solo en conexión real y modo EXPLORANDO
-            if (!this.isConnected) return;
-            if (this.state.mode !== 'EXPLORANDO') return;
-
-            // Estimación simple: avanzar hacia adelante
-            this.state.updatePosition(0, -1, 0);
-        }, this._autoMapTickMs);
-    }
-
-    _stopAutoMapLoop() {
-        if (this._autoMapInterval) {
-            clearInterval(this._autoMapInterval);
-            this._autoMapInterval = null;
         }
     }
     
@@ -235,11 +275,18 @@ export class CommandSender {
     /**
      * Desactiva el modo simulación automática
      */
-    disableSimulation() {
-        this._stopAutoSimulation();
-        this.state.setMode('IDLE');
-        this.state.addLogMessage('⏹ Simulación detenida');
-        console.log('⏹ Simulación detenida.');
-        return true;
-    }
+  disableSimulation() {
+    this._stopAutoSimulation();
+    this.state.setMode('IDLE');
+    this.state.addLogMessage('⏹ Simulación detenida');
+    console.log('⏹ Simulación detenida.');
+    return true;
+  }
+
+  /**
+   * Envía ping keepalive al robot
+   */
+  sendPing() {
+    return this.send('P');
+  }
 }

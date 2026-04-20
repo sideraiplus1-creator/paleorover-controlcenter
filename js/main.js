@@ -1,6 +1,6 @@
 /**
  * main.js
- * Paleo Rover Control Center - v2.0 PRODUCTION
+ * Paleo Rover Control Center - v3.1 PRODUCTION
  * Fases: 1-UI | 2-JS Base | 3-Bluetooth | 4-Polish | 5-Production ✅
  */
 
@@ -9,7 +9,8 @@ import { UIController } from './modules/uicontroller.js';
 import { MapRenderer } from './modules/maprenderer.js';
 import { CommandSender } from './modules/commandsender.js';
 import { EventHandlers } from './modules/eventhandlers.js';
-import { ProtocolHandler } from './modules/protocolhandler.js';
+// NOTE: ProtocolHandler desactivado temporalmente - Bug #13
+// import { ProtocolHandler } from './modules/protocolhandler.js';
 import { StorageManager } from './modules/storagemanager.js';
 import { AudioFeedback } from './modules/audiofeedback.js';
 import { ChartManager } from './modules/chartmanager.js';
@@ -19,7 +20,7 @@ import { PWAManager } from './modules/pwamanager.js';
 window.paleoRoverStartTime = Date.now();
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('%c🦕 Paleo Rover v2.0', 'font-size:24px;color:#C4A35A');
+    console.log('%c🦕 Paleo Rover v3.1', 'font-size:24px;color:#C4A35A');
     console.log('%cProduction Ready', 'font-size:14px;color:#00FF00');
     
     // ═══════════════════════════════════════════════════
@@ -44,19 +45,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const savedData = storage.load();
     if (savedData) storage.restoreDiscoveries(savedData);
     
-    // ═══════════════════════════════════════════════════
-    // FASE 5: PRODUCCIÓN
-    // ═══════════════════════════════════════════════════
-    const protocol = new ProtocolHandler(robotState);
-    const recorder = new MissionRecorder(robotState, commandSender);
-    const pwa = new PWAManager();
-    
-    // Keepalive periódico (evita timeout de MANUAL en Arduino)
-    setInterval(() => {
-        if (commandSender.isConnected) {
-            commandSender.send(protocol.getPing());
-        }
-    }, 2000);
+  // ═══════════════════════════════════════════════════
+  // FASE 5: PRODUCCIÓN
+  // ═══════════════════════════════════════════════════
+  // NOTE: ProtocolHandler desactivado - Bug #13
+  // const protocol = new ProtocolHandler(robotState);
+  const recorder = new MissionRecorder(robotState, commandSender);
+  const pwa = new PWAManager();
+
+  // Heartbeat periódico (usando nuevo sendPing en CommandSender)
+  setInterval(() => {
+    if (robotState.connected && !commandSender.isSimulation) {
+      commandSender.sendPing();
+    }
+  }, 5000);
     
     // ═══════════════════════════════════════════════════
     // UI - BOTONES DE EXPORTACIÓN (FASE 4)
@@ -97,59 +99,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         pwa.promptInstall();
     });
     
-    // Controles de grabación
-    document.getElementById('btnRecord')?.addEventListener('click', () => {
-        if (recorder.isRecording) {
-            const mission = recorder.stopRecording();
-            const name = prompt('Nombre de la misión:');
-            if (name) recorder.saveMission(name);
-            updateMissionList();
-        } else {
-            recorder.startRecording();
-        }
-    });
-    
-    // Actualizar lista de misiones
-    const updateMissionList = () => {
-        const list = document.getElementById('missionList');
-        if (!list) return;
-        
-        const missions = recorder.listMissions();
-        if (missions.length === 0) {
-            list.innerHTML = '<p class="empty-hint">No hay misiones grabadas</p>';
-            return;
-        }
-        
-        list.innerHTML = missions.map(m => `
-            <div class="mission-item">
-                <span>${m.name}</span>
-                <button onclick="window.playMission('${m.key}')">▶️</button>
-                <button onclick="window.deleteMission('${m.key}')">🗑️</button>
-            </div>
-        `).join('');
-    };
-    
-    window.playMission = (key) => {
-        const mission = recorder.loadMission(key);
-        if (mission) recorder.playMission(mission);
-    };
-    
-    window.deleteMission = (key) => {
-        recorder.deleteMission(key);
-        updateMissionList();
-    };
-    
     // Calibración remota
     document.getElementById('btnCalibrate')?.addEventListener('click', () => {
-        commandSender.send(protocol.encode('CL', { s: 'IR' }));
+        commandSender.send('X');
         robotState.addLogMessage('🔧 Calibración IR iniciada');
     });
     
-    // Notificaciones
-    document.getElementById('btnNotify')?.addEventListener('click', () => {
-        protocol.requestNotificationPermission();
-        robotState.addLogMessage('🔔 Notificaciones activadas');
-    });
+  // Notificaciones
+  document.getElementById('btnNotify')?.addEventListener('click', () => {
+    // NOTE: ProtocolHandler desactivado - Bug #13
+    // protocol.requestNotificationPermission();
+    // REPLACEMENT: Solicitar permisos manualmente
+    if ('Notification' in window && Notification.requestPermission) {
+      Notification.requestPermission().then(permission => {
+        robotState.addLogMessage(`🔔 Permiso de notificación: ${permission}`);
+      });
+    }
+  });
     
     // ═══════════════════════════════════════════════════
     // ACTUALIZAR ESTADÍSTICAS EN TIEMPO REAL
@@ -173,49 +139,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ═══════════════════════════════════════════════════
     // INICIALIZACIÓN FINAL
     // ═══════════════════════════════════════════════════
-    setTimeout(() => {
-        // No marcar conectado por defecto: solo cuando haya conexión real
-        uiController.showMessage('🦕 Paleo Rover v2.0 listo. Producción activada.');
-        protocol.requestNotificationPermission();
-        updateMissionList();
-    }, 500);
+setTimeout(() => {
+    uiController.showMessage('🦕 Paleo Rover v3.1 listo. Producción activada.');
+    // NOTE: ProtocolHandler desactivado - Bug #13
+    // protocol.requestNotificationPermission();
+  }, 500);
     
-    // ═══════════════════════════════════════════════════
-    // API GLOBAL COMPLETA
-    // ═══════════════════════════════════════════════════
-    window.paleoRover = {
-        // Core
-        state: robotState,
-        ui: uiController,
-        map: mapRenderer,
-        sender: commandSender,
-        
-        // Fase 4
-        storage: storage,
-        audio: audio,
-        charts: charts,
-        
-        // Fase 5
-        protocol: protocol,
-        recorder: recorder,
-        pwa: pwa,
-        
-        // Métodos
-        connect: (type) => commandSender.connectReal(type),
+  // ═══════════════════════════════════════════════════
+  // API GLOBAL COMPLETA
+  // ═══════════════════════════════════════════════════
+  window.paleoRover = {
+    // Core
+    state: robotState,
+    ui: uiController,
+    map: mapRenderer,
+    sender: commandSender,
+
+    // Fase 4
+    storage: storage,
+    audio: audio,
+    charts: charts,
+
+    // Fase 5
+    // NOTE: ProtocolHandler desactivado - Bug #13
+    // protocol: protocol,
+    recorder: recorder,
+    pwa: pwa,
+
+    // Métodos
+    connect: (type) => commandSender.connectReal(type),
         disconnect: () => commandSender.disconnect(),
         export: (format) => storage.generateReport(format),
         record: () => recorder.startRecording(),
         stopRecord: () => recorder.stopRecording(),
         playMission: (key) => window.playMission(key),
-        calibrate: (sensor) => commandSender.send(
-            protocol.encode('CL', { s: sensor })
-        ),
+        calibrate: () => commandSender.send('X'),
         
         // Info
-        version: '2.0',
+        version: '3.1',
         phases: ['UI', 'JS Base', 'Bluetooth', 'Polish', 'Production']
     };
     
-    console.log('✅ Paleo Rover v2.0 cargado');
+    const unlockAudio = async () => {
+        if (window.paleoRover?.audio) {
+            await window.paleoRover.audio._ensureResumed();
+        }
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('touchstart', unlockAudio);
+    };
+
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+    
+console.log('✅ Paleo Rover v3.1 cargado');
     console.log('Comandos: paleoRover.connect(), .record(), .playMission(), .calibrate()');
 });

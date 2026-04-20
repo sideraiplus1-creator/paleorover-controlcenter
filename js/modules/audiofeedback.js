@@ -4,45 +4,53 @@
  */
 
 export class AudioFeedback {
-    constructor(robotState) {
-        this.state = robotState;
-        this.enabled = true;
-        this.volume = 0.3;
-        
-        // Crear contexto de audio
-        this.audioContext = null;
-        this._initAudio();
-        
-        // Suscribirse a eventos
-        this._subscribeToEvents();
-    }
+  constructor(robotState) {
+    this.state = robotState;
+    this.enabled = true;
+    this.volume = 0.3;
+    this._initialized = false;
+    this._unsubscribe = null;
+
+    this.audioContext = null;
+    this._setupUserInteraction();
+
+    // Suscribirse a eventos
+    this._subscribeToEvents();
+  }
     
     _initAudio() {
         try {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-            // Reanudar el contexto con el primer gesto del usuario
-            const resumeOnGesture = () => {
-                if (this.audioContext && this.audioContext.state === 'suspended') {
-                    this.audioContext.resume();
-                }
-                document.removeEventListener('click', resumeOnGesture);
-                document.removeEventListener('touchstart', resumeOnGesture);
-                document.removeEventListener('keydown', resumeOnGesture);
-            };
-            document.addEventListener('click', resumeOnGesture);
-            document.addEventListener('touchstart', resumeOnGesture);
-            document.addEventListener('keydown', resumeOnGesture);
+            this._initialized = true;
         } catch (e) {
             console.warn('Web Audio API no soportada');
         }
     }
-    
-    _subscribeToEvents() {
-        // Contador para no reproducir sonido de movimiento en cada tick
-        this._moveCounter = 0;
 
-        this.state.subscribe((event, value) => {
+    _setupUserInteraction() {
+        const initAudio = async () => {
+            if (!this._initialized) {
+                this._initAudio();
+            }
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                try {
+                    await this.audioContext.resume();
+                } catch (e) {
+                    console.warn('No se pudo reanudar AudioContext:', e);
+                }
+            }
+        };
+
+        document.addEventListener('click', initAudio);
+        document.addEventListener('touchstart', initAudio);
+        document.addEventListener('keydown', initAudio);
+    }
+    
+  _subscribeToEvents() {
+    // Contador para no reproducir sonido de movimiento en cada tick
+    this._moveCounter = 0;
+
+    this._unsubscribe = this.state.subscribe((event, value) => {
             if (!this.enabled) return;
 
             switch (event) {
@@ -130,17 +138,22 @@ export class AudioFeedback {
     // UTILIDAD AUDIO
     // ═══════════════════════════════════════════════════════
     
-    _playTone(frequency, duration, volume = this.volume) {
-        if (!this.audioContext) return;
-
-        // Reanudar contexto si está suspendido (política de autoplay)
+    async _ensureResumed() {
+        if (!this.audioContext) return false;
         if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume().then(() => {
-                this._doPlayTone(frequency, duration, volume);
-            });
-            return;
+            try {
+                await this.audioContext.resume();
+            } catch (e) {
+                return false;
+            }
         }
+        return this.audioContext.state === 'running';
+    }
 
+    async _playTone(frequency, duration, volume = this.volume) {
+        if (!this.audioContext) return;
+        const isReady = await this._ensureResumed();
+        if (!isReady) return;
         this._doPlayTone(frequency, duration, volume);
     }
 
@@ -179,20 +192,34 @@ export class AudioFeedback {
         this.volume = Math.max(0, Math.min(1, vol));
     }
     
-    /**
-     * Prueba todos los sonidos
-     */
-    testAll() {
-        const sounds = [
-            () => this.playConnectionSound(true),
-            () => this.playDiscoverySound(),
-            () => this.playModeChangeSound('EXPLORANDO'),
-            () => this.playDetectionBeep(),
-            () => this.playConnectionSound(false)
-        ];
-        
-        sounds.forEach((sound, i) => {
-            setTimeout(sound, i * 800);
-        });
+  /**
+   * Prueba todos los sonidos
+   */
+  testAll() {
+    const sounds = [
+      () => this.playConnectionSound(true),
+      () => this.playDiscoverySound(),
+      () => this.playModeChangeSound('EXPLORANDO'),
+      () => this.playDetectionBeep(),
+      () => this.playConnectionSound(false)
+    ];
+
+    sounds.forEach((sound, i) => {
+      setTimeout(sound, i * 800);
+    });
+  }
+
+  /**
+   * Limpia suscripciones y recursos de audio
+   */
+  destroy() {
+    if (this._unsubscribe) {
+      this._unsubscribe();
+      this._unsubscribe = null;
     }
+    if (this.audioContext) {
+      this.audioContext.close().catch(console.warn);
+      this.audioContext = null;
+    }
+  }
 }

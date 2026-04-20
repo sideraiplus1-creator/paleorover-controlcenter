@@ -39,8 +39,9 @@ export class UIController {
             areaExplored: document.getElementById('areaExplored'),
             positionDisplay: document.getElementById('position'),
             
-            // Overlay
-            discoveryOverlay: document.getElementById('discoveryOverlay')
+            // Overlays
+            discoveryOverlay: document.getElementById('discoveryOverlay'),
+            danceOverlay: document.getElementById('danceOverlay')
         };
         
         // Suscribirse a cambios de estado
@@ -120,6 +121,10 @@ export class UIController {
         stateBadge.className = 'state-badge';
         stateBadge.classList.add(mode.toLowerCase());
         stateText.textContent = mode;
+        
+        if (mode === 'BAILANDO') {
+            this._showDanceOverlay();
+        }
     }
     
     _updateDistance(cm) {
@@ -194,12 +199,17 @@ export class UIController {
     _showDiscoveryOverlay(discovery) {
         const overlay = this.elements.discoveryOverlay;
         if (!overlay) {
-            console.warn('❌ discoveryOverlay no encontrado en el DOM');
+            console.warn('❌ #discoveryOverlay no encontrado');
             return;
         }
 
-        // Buscar subtitle con múltiples selectores por si cambió el nombre
-        const subtitle = overlay.querySelector('.discovery-subtitle') 
+        const numberEl = overlay.querySelector('#discoveryNumber')
+                      || overlay.querySelector('.discovery-number')
+                      || overlay.querySelector('[data-discovery-number]');
+        const sensorEl = overlay.querySelector('#discoverySensor')
+                     || overlay.querySelector('.discovery-sensor')
+                     || overlay.querySelector('[data-discovery-sensor]');
+        const subtitle = overlay.querySelector('.discovery-subtitle')
                       || overlay.querySelector('.discovery-desc')
                       || overlay.querySelector('p');
 
@@ -209,16 +219,40 @@ export class UIController {
             'BOTH': '¡Ambos sensores!'
         };
 
-        if (subtitle) {
-            subtitle.textContent = `${sensorText[discovery.sensor] || discovery.sensor} • ${discovery.timestamp}`;
+        if (numberEl) {
+            numberEl.textContent = '#' + (discovery.number || discovery.id || '?');
         }
 
-        // Forzar reflow para que la animación se reinicie si ya estaba activo
+        if (sensorEl) {
+            sensorEl.textContent = 'Sensor: ' + (sensorText[discovery.sensor] || discovery.sensor || 'DETECTADO');
+        }
+
+        if (subtitle) {
+            subtitle.textContent = `${sensorText[discovery.sensor] || discovery.sensor || 'DETECTADO'} • ${discovery.timestamp || ''}`.trim();
+        }
+
+        overlay.style.display = 'flex';
         overlay.classList.remove('active');
-        void overlay.offsetWidth; // fuerza reflow
+        void overlay.offsetWidth;
         overlay.classList.add('active');
-        
+
         console.log('🦴 Overlay activado:', discovery);
+    }
+
+    _showDanceOverlay() {
+        const overlay = this.elements.danceOverlay;
+        if (!overlay) return;
+
+        overlay.classList.add('active');
+        overlay.style.display = 'flex';
+        this.state.addLogMessage('💃 Modo baile activado');
+
+        setTimeout(() => {
+            overlay.classList.remove('active');
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 500);
+        }, 2500);
     }
     
     _updateDiscoveriesList() {
@@ -253,9 +287,9 @@ export class UIController {
     _updateLog(entry) {
         const { logDisplay } = this.elements;
         
-        // Mostrar últimos 3 mensajes
-        const recent = this.state.logMessages.slice(0, 3);
-        logDisplay.innerHTML = recent.map(m => 
+        // Mostrar todo el historial de log
+        const history = this.state.logMessages.slice();
+        logDisplay.innerHTML = history.map(m => 
             `<div>[${m.time}] ${m.message}</div>`
         ).join('');
     }
