@@ -31,9 +31,10 @@
 
 ---
 
-### 🔴 Bug #4 — Versión Incorrecta en Logs
-**Estado:** Requiere fix simple  
+### ✅ Bug #4 — Versión Incorrecta en Logs
+**Estado:** ✅ CORREGIDO
 **Impacto:** Medio (consistencia)
+**Cambio:** `v2.0` → `v3.1`
 
 #### **Archivo:** `js/main.js`
 #### **Línea:** 184
@@ -56,8 +57,9 @@ console.log('✅ Paleo Rover v3.1 cargado');
 
 ---
 
-### 🔴 Bug #13 — Protocolo v2 Duplicado e Incompatible
-**Estado:** Requiere eliminación/refactorización  
+### ✅ Bug #13 — Protocolo v2 Desactivado
+**Estado:** ✅ CORREGIDO
+**Cambio:** ProtocolHandler import comentado en main.js, sendPing() agregado a CommandSender
 **Impacto:** Alto (confusión de arquitectura, código muerto)
 
 #### **Archivo:** `js/modules/protocolhandler.js` (TODO)
@@ -104,8 +106,9 @@ El `protocol.getPing()` genera `P\n` según el código de `protocolhandler.js` l
 
 ---
 
-### 🔴 Bug #14a — Acceso Directo a Estado Privado (StorageManager)
-**Estado:** Requiere encapsulamiento  
+### ✅ Bug #14a — Acceso Directo a Estado Privado (StorageManager)
+**Estado:** ✅ CORREGIDO
+**Cambio:** Setters agregados a RobotState.js (setDiscoveries, setTrail, setPosition)
 **Impacto:** Medio (arquitectura, posible corrupción de estado)
 
 #### **Archivo:** `js/modules/storagemanager.js`
@@ -204,8 +207,9 @@ restoreDiscoveries(data) {
 
 ---
 
-### 🔴 Bug #14b — Acceso Directo a Estado Privado (MissionRecorder)
-**Estado:** Requiere encapsulamiento  
+### ✅ Bug #14b — Acceso Directo a Estado Privado (MissionRecorder)
+**Estado:** ✅ CORREGIDO
+**Cambio:** MissionRecorder ahora usa setPosition()
 **Impacto:** Medio
 
 #### **Archivo:** `js/modules/missionrecorder.js`
@@ -235,8 +239,9 @@ case 'position':
 
 ---
 
-### 🔴 Bug #15 — AudioFeedback sin Cleanup
-**Estado:** Requiere función destroy  
+### ✅ Bug #15 — AudioFeedback con Cleanup
+**Estado:** ✅ CORREGIDO
+**Cambio:** _unsubscribe guardado y método destroy() agregado
 **Impacto:** Bajo-Medio (memory leak potencial)
 
 #### **Archivo:** `js/modules/audiofeedback.js`
@@ -353,8 +358,9 @@ El Arduino v3.5 NO envía `POS:x,y,angle` actualmente - el tracking de posición
 
 ---
 
-### 🟡 Bug #10 — Preferencia de Conexión No Persistente
-**Estado:** Mejora UX  
+### ✅ Bug #10 — Preferencia de Conexión Persistente
+**Estado:** ✅ CORREGIDO
+**Cambio:** _saveConnectionPreference() y _loadConnectionPreference() en ConnectionManager
 **Impacto:** Bajo (conveniencia)
 
 #### **Archivo:** `js/modules/commandsender.js`
@@ -452,7 +458,7 @@ async sendWithRetry(command, maxRetries = 3) {
 | #2 | UI bloqueada tras desconexión | `connectionmanager.js` + `eventhandlers.js` | ✅ CORREGIDO - Cleanup completo en `disconnect()` |
 | #3 | UUID BLE incorrecto | `connectionmanager.js` | ✅ CORREGIDO - UUID v1: `0000ffe0...` |
 | #5 | D-Pad sin Stop al soltar fuera | `eventhandlers.js` | ✅ CORREGIDO - Usa `mouseleave` + `touchcancel` |
-| #6 | Sin validación de modo en movimiento | `commandsender.js` + `eventhandlers.js` | ✅ CORREGIDO - Verifica modo en línea 130 |
+| #6 | Validación MANUAL en movimientos | `commandsender.js` | ✅ CORREGIDO - forward/left/right/backward verifican MANUAL |
 | #7 | Hallazgos sin timestamp | `robotstate.js` | ✅ CORREGIDO - `addDiscovery()` incluye timestamp línea 163 |
 | #8 | Memory leak en observers | `robotstate.js` | ✅ CORREGIDO - `subscribe()` retorna cleanup línea 204-207 |
 | #9 | Timestamp presente | N/A | ✅ CORREGIDO - Cubierto por #7 |

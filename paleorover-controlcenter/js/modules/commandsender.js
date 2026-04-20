@@ -83,13 +83,48 @@ export class CommandSender {
         }
     }
 
-    setMode(mode) {
-        return this.send(`E:${mode}`);
+  /**
+   * Bug #6: Movimientos solo permitidos en modo MANUAL
+   */
+  forward() {
+    if (this.state.mode !== 'MANUAL') {
+      console.warn('⚠️ forward() solo disponible en modo MANUAL');
+      return Promise.resolve({ success: false, error: 'Modo MANUAL requerido' });
     }
+    return this.send('F');
+  }
 
-    stop() {
-        return this.send('S');
+  backward() {
+    if (this.state.mode !== 'MANUAL') {
+      console.warn('⚠️ backward() solo disponible en modo MANUAL');
+      return Promise.resolve({ success: false, error: 'Modo MANUAL requerido' });
     }
+    return this.send('B');
+  }
+
+  left() {
+    if (this.state.mode !== 'MANUAL') {
+      console.warn('⚠️ left() solo disponible en modo MANUAL');
+      return Promise.resolve({ success: false, error: 'Modo MANUAL requerido' });
+    }
+    return this.send('L');
+  }
+
+  right() {
+    if (this.state.mode !== 'MANUAL') {
+      console.warn('⚠️ right() solo disponible en modo MANUAL');
+      return Promise.resolve({ success: false, error: 'Modo MANUAL requerido' });
+    }
+    return this.send('R');
+  }
+
+  setMode(mode) {
+    return this.send(`E:${mode}`);
+  }
+
+  stop() {
+    return this.send('S');
+  }
 
     _loadSpeeds() {
         const savedManual = localStorage.getItem('paleoRover_speedManual');

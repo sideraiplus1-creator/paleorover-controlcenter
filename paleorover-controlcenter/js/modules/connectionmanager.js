@@ -4,34 +4,66 @@
  */
 
 export class ConnectionManager {
-    constructor(robotState) {
-        this.state = robotState;
-        this.type = 'simulation';
+  constructor(robotState) {
+    this.state = robotState;
+    this.type = 'simulation';
 
-        this.port = null;
-        this.reader = null;
-        this.writer = null;
+    this.port = null;
+    this.reader = null;
+    this.writer = null;
 
-        this.device = null;
-        this.server = null;
-        this.characteristic = null;
+    this.device = null;
+    this.server = null;
+    this.characteristic = null;
 
-        this._readLoopRunning = false;
-        this._messageQueue = [];
-        this._bluetoothBuffer = '';
-        this._lastDiscoveryTime = 0;
+    this._readLoopRunning = false;
+    this._messageQueue = [];
+    this._bluetoothBuffer = '';
+    this._lastDiscoveryTime = 0;
 
-        this._heartbeatInterval = null;
-        this._reconnectAttempts = 0;
-        this._maxReconnectAttempts = 3;
-        this._isReconnecting = false;
-        this._commandQueue = [];
-        this._sending = false;
+    this._heartbeatInterval = null;
+    this._reconnectAttempts = 0;
+    this._maxReconnectAttempts = 3;
+    this._isReconnecting = false;
+    this._commandQueue = [];
+    this._sending = false;
 
-        // FIX: watchdog — "Sin respuesta" solo si no llega NADA en 4s
-        this._lastRxTime = Date.now();
-        this._watchdogInterval = null;
+    // FIX: watchdog — "Sin respuesta" solo si no llega NADA en 4s
+    this._lastRxTime = Date.now();
+    this._watchdogInterval = null;
+
+    // Bug #10: Cargar preferencia de conexión
+    this._connectionPreferenceKey = 'paleoRover_connectionPreference';
+    this._loadConnectionPreference();
+  }
+
+  /**
+   * Carga preferencia de conexión guardada en localStorage
+   */
+  _loadConnectionPreference() {
+    try {
+      const saved = localStorage.getItem(this._connectionPreferenceKey);
+      if (saved) {
+        this._preferredConnectionType = saved;
+        this.state.addLogMessage(`Preferencia de conexión: ${saved}`);
+      }
+    } catch (e) {
+      // localStorage no disponible (modo privado, etc.)
+      this._preferredConnectionType = null;
     }
+  }
+
+  /**
+   * Guarda preferencia de conexión en localStorage
+   */
+  _saveConnectionPreference(type) {
+    try {
+      localStorage.setItem(this._connectionPreferenceKey, type);
+    } catch (e) {
+      // localStorage puede estar lleno o no disponible
+      console.warn('No se pudo guardar preferencia:', e);
+    }
+  }
 
     // ═══════════════════════════════════════════════════════
     // WEB SERIAL
@@ -47,9 +79,11 @@ export class ConnectionManager {
             this.port = await navigator.serial.requestPort({
                 filters: [{ usbVendorId: 0x1A86 }, { usbVendorId: 0x0403 }]
             });
-            await this.port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none' });
-            this.type = 'serial';
-            this.state.setConnected(true);
+    await this.port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none' });
+    this.type = 'serial';
+    this.state.setConnected(true);
+    // Bug #10: Guardar preferencia de conexión
+    this._saveConnectionPreference('serial');
             this.state.addLogMessage('✅ Conectado por USB-Serial a 9600 baud');
             this._startSerialRead();
             this._startWatchdog();
@@ -120,9 +154,11 @@ export class ConnectionManager {
             this.characteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
             await this.characteristic.startNotifications();
             this.characteristic.addEventListener('characteristicvaluechanged', (e) => this._onBluetoothData(e));
-            this.type = 'bluetooth';
-            this.state.setConnected(true);
-            this.state.addLogMessage('✅ Conectado por Bluetooth BLE');
+    this.type = 'bluetooth';
+    this.state.setConnected(true);
+    // Bug #10: Guardar preferencia de conexión
+    this._saveConnectionPreference('bluetooth');
+    this.state.addLogMessage('✅ Conectado por Bluetooth BLE');
             this.device.addEventListener('gattserverdisconnected', () => {
                 this._stopHeartbeat();
                 this._stopWatchdog();
